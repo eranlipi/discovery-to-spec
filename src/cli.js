@@ -471,7 +471,10 @@ function writeSummary(ctx, exp, docs, handoffVars) {
     screens: get(spec, 'screens') || none,
     openQuestions: questions || none,
   };
-  const text = lib.render(lib.getTemplate(ctx, 'summary'), vars).replace(/\n{3,}/g, '\n\n');
+  const text = lib
+    .render(lib.getTemplate(ctx, 'summary'), vars)
+    .replace(new RegExp(`\n## [^\n]+\n${none}\n`, 'g'), '\n') // optional sections left empty
+    .replace(/\n{3,}/g, '\n\n');
   lib.writeText(path.join(exp.dir, 'summary.md'), text);
 }
 

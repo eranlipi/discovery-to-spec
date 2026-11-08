@@ -5,7 +5,7 @@ generated: 2026-11-08
 
 # Mobile checkout drop-off: summary
 
-> For design and product: the whole exploration on one page. Generated with the handoff (npx d2s handoff 001-checkout-mobile), so fix things in the stage documents, not here.
+> For design and product: the whole exploration on one page. It is generated from the stage documents, so fix things there, not here.
 
 ## The problem
 Fictional example. About 40% of users who reach checkout on mobile don't complete it. On desktop the rate is much lower, so we suspect the mobile experience rather than pricing.
@@ -47,11 +47,6 @@ Track the mobile completion rate and the number of payment-related support ticke
 1. Cart: https://www.figma.com/design/EXAMPLE/Checkout?node-id=10-2
 2. One-page checkout: https://www.figma.com/design/EXAMPLE/Checkout?node-id=10-1
 3. Order confirmation: https://www.figma.com/design/EXAMPLE/Checkout?node-id=10-3
-
-## Figma
-- https://www.figma.com/design/EXAMPLE/Checkout?node-id=10-1
-- https://www.figma.com/design/EXAMPLE/Checkout?node-id=10-2
-- https://www.figma.com/design/EXAMPLE/Checkout?node-id=10-3
 
 ## Open questions
 Do users drop off before entering card details, or after?

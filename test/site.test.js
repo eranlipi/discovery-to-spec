@@ -93,6 +93,10 @@ test('the preview escapes HTML and only links http(s) URLs', () => {
   assert.match(html, /<h3>Title<\/h3>/);
   assert.match(html, /<td><code>x<\/code><\/td><td><strong>y<\/strong><\/td>/);
   assert.doesNotMatch(html, /id: x/, 'front matter is not shown');
+
+  const figma = Form.markdown('- Cart: https://www.figma.com/design/AbC/Checkout?node-id=10-2&t=x');
+  assert.match(figma, /<a href="https:\/\/www\.figma\.com\/design\/AbC\/Checkout\?node-id=10-2&amp;t=x"[^>]*>Figma · 10-2 ↗<\/a>/, 'Figma frame links read short');
+  assert.match(Form.markdown('See https://example.com/a'), />https:\/\/example\.com\/a<\/a>/, 'other links stay as they are');
 });
 
 test('each sandbox view gets its own project, and status fits the terminal', () => {
