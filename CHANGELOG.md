@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Website for discoverytospec.com in `site/`, in English with a Hebrew option, and a sandbox that runs the real CLI in the browser.
+
 ## 0.1.0 (2026-11-08)
 
 First release.

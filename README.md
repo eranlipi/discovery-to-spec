@@ -6,6 +6,8 @@
 frame → research → options → decide → spec → handoff
 ```
 
+**Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
+
 > Status: v0.1.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
@@ -21,7 +23,7 @@ AI coding tools made building fast. What's slow now is everything before it: fra
 - **Agent skills** for Claude Code and Cursor (`/d2s-frame` … `/d2s-handoff`), plus an `AGENTS.md` section for other agents. Agents help write and summarize; they're told never to invent research and never to approve decisions.
 - **An optional CI check** for pull requests.
 
-See [`examples/checkout`](examples/checkout) for a complete, fictional feature that went through all six stages.
+See [`examples/checkout`](examples/checkout) for a complete, fictional feature that went through all six stages, or try the whole flow in the [sandbox on the website](https://discoverytospec.com/#sandbox). It runs the real CLI in your browser.
 
 ## Free and safe to adopt
 
@@ -130,6 +132,10 @@ Templates ship in English (default) and Hebrew (`--lang he`, right to left). The
 - GitHub issue forms for opening a brief without touching files.
 - Publishing to npm.
 - More languages.
+
+## Website
+
+The site lives in [`site/`](site). It's a single static page built with zero dependencies, and its sandbox runs this repository's CLI in the browser. `npm run site` builds it into `site/dist`. See [site/README.md](site/README.md) for deploying to Cloudflare Pages.
 
 ## Contributing
 

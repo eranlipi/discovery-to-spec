@@ -38,7 +38,8 @@ node /path/to/discovery-to-spec/bin/d2s.js new "Something to explore"
 | `integrations/agents-md.md` | The block added to `AGENTS.md` |
 | `integrations/ci/` | The optional GitHub Actions check |
 | `examples/checkout/` | A complete, fictional exploration |
-| `test/` | Tests |
+| `site/` | The website, including the in-browser sandbox |
+| `test/` | Tests (including a build of the site) |
 
 ## Adding a language
 
