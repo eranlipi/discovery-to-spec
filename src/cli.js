@@ -78,10 +78,19 @@ function init(flags) {
   if (lib.exists(cfgPath) && !flags.force) {
     throw new UserError(`Already initialized (${lib.CONFIG_FILE} exists). Use --force to refresh the agent files.`);
   }
-  const lang = flags.lang || 'en';
+  // --force keeps the existing settings unless a flag changes them.
+  let existing = {};
+  if (lib.exists(cfgPath)) {
+    try {
+      existing = JSON.parse(lib.readText(cfgPath)) || {};
+    } catch {
+      // unreadable config: start from the defaults
+    }
+  }
+  const lang = flags.lang || existing.lang || 'en';
   if (!lib.LANGS.includes(lang)) throw new UserError(`--lang must be one of: ${lib.LANGS.join(', ')}`);
-  const dir = typeof flags.dir === 'string' ? flags.dir.replace(/\/+$/, '') : 'design';
-  const cli = typeof flags.cli === 'string' ? flags.cli : defaultCli(root);
+  const dir = typeof flags.dir === 'string' ? flags.dir.replace(/\/+$/, '') : existing.dir || 'design';
+  const cli = typeof flags.cli === 'string' ? flags.cli : existing.cli || defaultCli(root);
   let agents = AGENTS;
   if (typeof flags.agents === 'string') {
     agents = flags.agents === 'none' ? [] : flags.agents.split(',').map((s) => s.trim()).filter(Boolean);
@@ -117,15 +126,8 @@ function init(flags) {
   if (agents.includes('agents-md')) results.push([upsertAgentsMd(root, lib.render(pkg('integrations/agents-md.md'), vars)), 'AGENTS.md']);
   if (flags.ci) put('.github/workflows/d2s-check.yml', lib.render(pkg('integrations/ci/d2s-check.yml'), vars), !!flags.force);
 
-  // Config last, so a failed init can simply be re-run. --force keeps the team's approval rules.
-  let approvals = { ...lib.DEFAULT_APPROVALS };
-  if (lib.exists(cfgPath)) {
-    try {
-      approvals = JSON.parse(lib.readText(cfgPath)).approvals || approvals;
-    } catch {
-      // unreadable config: start from the defaults
-    }
-  }
+  // Config last, so a failed init can simply be re-run.
+  const approvals = existing.approvals || { ...lib.DEFAULT_APPROVALS };
   const config = { version: 1, lang, dir, cli, approvals };
   lib.writeText(cfgPath, JSON.stringify(config, null, 2) + '\n');
   results.push([flags.force ? 'updated' : 'created', lib.CONFIG_FILE]);
@@ -512,7 +514,8 @@ Usage: d2s <command> [options]
       --cli "<command>"   How docs and skills call this tool (default: "npx d2s" when
                           installed in the project, otherwise ${REMOTE_CLI})
       --ci                Add a GitHub Actions check for pull requests
-      --force             Refresh agent files and config in an initialized repo
+      --force             Refresh agent files and config in an initialized repo,
+                          keeping its language, folder, command and approval rules
   new "<title>"         Start an exploration (stage 1: frame)
       --slug <name>       Folder name (latin letters)
       --owner <name>      Who leads it

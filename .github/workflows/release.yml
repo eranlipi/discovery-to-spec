@@ -1,0 +1,37 @@
+# Publishes a GitHub release for the version in package.json, with notes from CHANGELOG.md.
+# Either push a tag (git tag v0.2.0 && git push origin v0.2.0), or run this workflow
+# from the Actions tab on master, which creates the tag as well.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test
+      - name: Work out the tag
+        id: tag
+        run: |
+          tag="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json ($tag)." >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - run: node .github/scripts/release-notes.mjs > notes.md
+      - name: Create the release
+        run: gh release create "$TAG" --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}

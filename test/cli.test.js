@@ -112,6 +112,13 @@ test('init refuses to run twice; --force refreshes without duplicating the AGENT
   assert.match(agents, /Use tabs\./, 'existing content is kept');
   assert.equal(agents.match(/<!-- d2s:start -->/g).length, 1);
   assert.deepEqual(JSON.parse(read(cfg)).approvals, custom, '--force keeps the approval rules');
+
+  const he = tmpRepo();
+  assert.equal(run(he, 'init', '--lang', 'he', '--dir', 'product', '--cli', 'npx d2s').code, 0);
+  assert.equal(run(he, 'init', '--force').code, 0);
+  const kept = JSON.parse(read(he, '.d2s.json'));
+  assert.deepEqual([kept.lang, kept.dir, kept.cli], ['he', 'product', 'npx d2s'], '--force keeps the language, folder and command');
+  assert.ok(kept.approvals, 'an upgraded config gets the approval rules');
 });
 
 test('init options are validated', () => {
