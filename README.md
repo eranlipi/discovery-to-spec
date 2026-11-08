@@ -8,7 +8,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.2.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.3.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -29,7 +29,7 @@ See [`examples/checkout`](examples/checkout) for a complete, fictional feature t
 ## Free and safe to adopt
 
 - MIT license, no paid tier.
-- **Zero dependencies** and no telemetry. The CLI makes no network calls, except an opt-in CI check that asks GitHub who approved a pull request. The tool is about 1,150 lines of plain Node.js you can review in an afternoon.
+- **Zero dependencies** and no telemetry. The CLI makes no network calls, except an opt-in CI check that asks GitHub who approved a pull request. The CLI is about 1,200 lines of plain Node.js you can review in an afternoon.
 - No new accounts or licenses: it works with the GitHub repo and the Figma files you already have. The Figma MCP server and AI agents are optional.
 
 ## Install
@@ -48,7 +48,7 @@ npx github:eranlipi/discovery-to-spec init
 node path/to/discovery-to-spec/bin/d2s.js init
 ```
 
-To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.2.0`.
+To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.3.0`.
 
 ## Quick start
 

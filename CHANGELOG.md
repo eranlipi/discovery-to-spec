@@ -1,10 +1,32 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-11-08)
 
-- **Figma plugin** (`figma-plugin/`): start, fill and advance explorations from a panel inside Figma. Attach selected frames with a "Show on canvas" button, pass the gate, and save to GitHub as one commit per save, with a keep-mine or take-theirs choice on conflicts and local drafts. It connects with a fine-grained GitHub token. See [figma-plugin/README.md](figma-plugin/README.md).
-- **A one-page summary for design and product** (`summary.md`), generated with the handoff. The sandbox's last stage shows it next to the handoff for developers.
-- Releases attach the plugin as a zip.
+Designers can now work in Figma, and every exploration ends with a page for design and product.
+
+### Figma plugin
+
+A panel inside Figma (`figma-plugin/`) that runs the real d2s core on the design files in your GitHub repository:
+
+- Start an exploration, fill each stage as a form, and pass the gate with Next stage. Gaps show next to their fields.
+- Attach the frames selected on the canvas to any field. Each link gets a "Show on canvas" button that jumps to the frame, on any page. Explorations linked to the open file come first.
+- Save sends your changes to GitHub as one commit. If someone else changed the same file, you choose: keep yours or take theirs. Unsaved drafts survive closing the panel.
+- At the end: the summary for design and product, the handoff for developers, and a link to copy for developers.
+- English and Hebrew (right to left), following the repository's templates.
+
+It connects with a fine-grained GitHub token (Contents: Read and write on one repository) and talks only to `api.github.com`. Download `d2s-figma-plugin-v0.3.0.zip` below, unzip it, and in the Figma desktop app choose Plugins → Development → Import plugin from manifest. Details in [figma-plugin/README.md](figma-plugin/README.md).
+
+This is the first version: approvals are typed names, and changes go straight to the chosen branch. Sign-in with a GitHub App, a pull request per exploration and verified approvals come next.
+
+### A summary for design and product
+
+- Passing the spec now writes `summary.md` next to `handoff.md`: the problem, who it matters to, the outcome, appetite and no-gos, what we learned, what we decided and why, what we didn't choose, risks, who approved, what's being built, Figma links and open questions. `d2s handoff` regenerates both.
+- The website sandbox's last stage shows it as "For design and product", next to "For developers".
+
+### Upgrading from 0.2.0
+
+- Nothing to change. Existing repositories get the summary from the packaged template the next time an exploration passes the spec, or with `d2s handoff <id>`.
+- To customize it, run `d2s init --force`, which adds `design/templates/summary.md` and keeps your settings.
 
 ## 0.2.0 (2026-11-08)
 
