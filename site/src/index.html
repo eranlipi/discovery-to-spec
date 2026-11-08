@@ -140,6 +140,15 @@
           <p class="dz-step"></p>
           <p class="dz-intro"></p>
           <div class="dz-notice" tabindex="-1" role="status" hidden></div>
+          <div class="dz-paste" hidden>
+            <label for="dz-paste-text" class="dz-paste-title" data-i18n="sandbox.pasteTitle">Paste the document Claude wrote for this stage</label>
+            <p class="field-help" data-i18n="sandbox.pasteHint">Each “## heading” fills the field with the same name. Fields without a matching heading stay as they are.</p>
+            <textarea id="dz-paste-text" rows="8" dir="auto"></textarea>
+            <div class="dz-paste-actions">
+              <button type="button" class="btn primary dz-paste-apply" data-i18n="sandbox.pasteApply">Fill the fields</button>
+              <button type="button" class="btn dz-paste-cancel" data-i18n="sandbox.pasteCancel">Cancel</button>
+            </div>
+          </div>
           <div class="dz-form"></div>
           <div class="dz-docs" role="group" aria-label="Generated documents" data-i18n-aria="sandbox.docsLabel" hidden>
             <button type="button" class="tool-btn" data-doc="summary" aria-pressed="true" data-i18n="sandbox.docSummary">For design and product</button>
@@ -149,6 +158,7 @@
           <div class="dz-actions">
             <button type="button" class="btn primary dz-next" data-i18n="sandbox.next">Next stage</button>
             <button type="button" class="btn dz-example" data-i18n="sandbox.example">Use example text</button>
+            <button type="button" class="btn dz-paste-toggle" data-i18n="sandbox.paste">Paste from Claude</button>
           </div>
         </div>
         <aside class="dz-file" hidden>

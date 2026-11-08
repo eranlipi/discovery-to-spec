@@ -54,6 +54,14 @@
       fileLinkSave: 'Save link',
       badFileLink: 'That isn’t a Figma file link.',
       showOnCanvas: 'Show on canvas',
+      pasteButton: 'Paste from Claude',
+      pasteTitle: 'Paste the document Claude wrote for this stage',
+      pasteHint: 'Each "## heading" fills the field with the same name. Fields without a matching heading stay as they are.',
+      pasteApply: 'Fill the fields',
+      pasteFilled: 'Filled from Claude: {fields}.',
+      pasteIgnored: ' Not used: {headings}.',
+      pasteSkipped: ' "{fields}" is left for people to fill in.',
+      pasteNothing: 'No heading in the text matches this stage\u2019s fields. Ask Claude for the document with the stage\u2019s headings.',
       notFound: 'That frame isn’t in this file anymore.',
       next: 'Next stage',
       save: 'Save',
@@ -136,6 +144,14 @@
       fileLinkSave: 'לשמור קישור',
       badFileLink: 'זה לא קישור לקובץ Figma.',
       showOnCanvas: 'להציג בקנבס',
+      pasteButton: 'הדבקה מ-Claude',
+      pasteTitle: 'מדביקים את המסמך ש-Claude כתב לשלב הזה',
+      pasteHint: 'כל כותרת "##" ממלאת את השדה עם אותו שם. שדות בלי כותרת מתאימה נשארים כמו שהם.',
+      pasteApply: 'למלא את השדות',
+      pasteFilled: 'מולא מ-Claude: {fields}.',
+      pasteIgnored: ' לא נכנסו: {headings}.',
+      pasteSkipped: ' את "{fields}" ממלאים אנשים בעצמם.',
+      pasteNothing: 'אף כותרת בטקסט לא מתאימה לשדות של השלב הזה. בקשו מ-Claude את המסמך עם הכותרות של השלב.',
       notFound: 'ה-frame הזה כבר לא בקובץ.',
       next: 'לשלב הבא',
       save: 'לשמור',
@@ -203,6 +219,7 @@
     overwrite: [],
     draftConflicts: [],
     lastField: null,
+    pasteOpen: false,
     form: null,
     error: '',
   };
@@ -577,6 +594,49 @@
     });
   }
 
+  /** Fill the current stage's fields from a document written in Claude. */
+  function pasteFromClaude(pasted) {
+    var e = exploration();
+    var path = relPath(S.d2s.path.join(e.exp.dir, e.stage.file));
+    var approvals = Form.keyOf(S.d2s.lib.KEY_SECTIONS[e.ctx.lang].approvedBy);
+    var r = Form.applyDocument(S.d2s.read(path), S.d2s.lib.getTemplate(e.ctx, e.stage.template), pasted, { skip: [approvals] });
+    if (!r.filled.length) {
+      S.notice = { kind: 'gate', text: t('pasteNothing') };
+      return drawNotice();
+    }
+    S.d2s.write(path, r.text);
+    persistDrafts();
+    S.pasteOpen = false;
+    S.notice = {
+      kind: 'ok',
+      text: t('pasteFilled', { fields: r.filled.join(', ') }) +
+        (r.skipped.length ? t('pasteSkipped', { fields: r.skipped.join(', ') }) : '') +
+        (r.ignored.length ? t('pasteIgnored', { headings: r.ignored.join(', ') }) : ''),
+    };
+    render();
+    if (S.gateShown) showGaps();
+  }
+
+  function drawPaste() {
+    var slot = refs.paste;
+    if (!slot) return;
+    slot.innerHTML = '';
+    if (!S.pasteOpen) {
+      slot.appendChild(h('button.link', { type: 'button', onclick: function () { S.pasteOpen = true; drawPaste(); slot.querySelector('textarea').focus(); } }, t('pasteButton')));
+      return;
+    }
+    var area = h('textarea', { rows: '8', dir: 'auto', 'aria-label': t('pasteTitle') });
+    slot.appendChild(h('div.paste',
+      h('strong', t('pasteTitle')),
+      h('span.input-hint', t('pasteHint')),
+      area,
+      h('div.actions',
+        h('button.primary', { type: 'button', onclick: function () { pasteFromClaude(area.value); } }, t('pasteApply')),
+        h('button', { type: 'button', onclick: function () { S.pasteOpen = false; drawPaste(); } }, t('cancel'))
+      )
+    ));
+  }
+
   function attachFrames() {
     var area = S.lastField;
     if (!area || !document.body.contains(area)) {
@@ -670,6 +730,7 @@
             onclick: function () {
               S.expId = e.id;
               S.view = null;
+              S.pasteOpen = false;
               S.notice = null;
               S.gateShown = false;
               S.screen = 'exp';
@@ -856,6 +917,7 @@
 
     refs.notice = h('div.notice-slot', { tabindex: '-1' });
     refs.attach = h('div.attach-slot');
+    refs.paste = h('div.paste-slot');
     refs.status = h('span.status', { 'aria-live': 'polite' });
     var screen = h('div.screen.exp',
       header(h('button.back', { type: 'button', onclick: function () { S.screen = 'home'; S.notice = null; render(); } }, (S.lang === 'he' ? '→ ' : '← ') + t('back'))),
@@ -867,6 +929,7 @@
       conflictsBox(),
       refs.notice,
       current && !handoff ? refs.attach : null,
+      current && !handoff ? refs.paste : null,
       body,
       h('div.footer',
         refs.status,
@@ -876,6 +939,7 @@
     );
     drawNotice();
     drawAttach();
+    drawPaste();
     drawStatus();
     return screen;
   }

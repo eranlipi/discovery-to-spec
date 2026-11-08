@@ -47,8 +47,9 @@
     return heading.replace(OPTIONAL_RE, '').replace(/\s+/g, ' ').trim();
   }
 
+  /** How fields are matched: case, "(optional)" and the kind of apostrophe or quote mark don't matter. */
   function keyOf(heading) {
-    return labelOf(heading).toLowerCase();
+    return labelOf(heading).toLowerCase().replace(/[\u05F3\u2019\u2018`']/g, "'").replace(/[\u05F4\u201C\u201D]/g, '"');
   }
 
   function stripComments(text) {
@@ -111,6 +112,40 @@
     if (clean) parts.push(clean);
     section.body = (parts.join('\n') + '\n').split('\n');
     return joinDoc(doc);
+  }
+
+  /**
+   * Fill fields from a pasted document, such as one written with Claude: every
+   * "## " section whose heading matches a field replaces that field's text.
+   * Fields whose keys are in opts.skip are left alone and listed in `skipped`.
+   * Returns { text, filled: [labels], ignored: [headings that match no field], skipped: [labels] }.
+   */
+  function applyDocument(docText, templateText, pasted, opts) {
+    var skip = (opts && opts.skip) || [];
+    var skipped = [];
+    var src = String(pasted || '').replace(/\r\n/g, '\n').trim();
+    // A whole chat reply may be pasted: use the code block that holds the document, if there is one,
+    // and drop the "paste it in the plugin" line that Claude adds.
+    var fence = /(^|\n)(```|~~~)[^\n]*\n([\s\S]*?)\n\2[ \t]*(?=\n|$)/.exec(src);
+    if (fence && /^##\s/m.test(fence[3])) src = fence[3];
+    src = src.split('\n').filter(function (line) { return !/Paste from Claude|הדבקה מ-Claude/.test(line); }).join('\n');
+    var fields = {};
+    model(docText, templateText).fields.forEach(function (f) { fields[f.key] = f; });
+    var text = docText;
+    var filled = [];
+    var ignored = [];
+    splitDoc(src).sections.forEach(function (s) {
+      var field = fields[keyOf(s.heading)];
+      var value = stripComments(s.body.join('\n')).trim();
+      if (!field) ignored.push(labelOf(s.heading));
+      else if (skip.indexOf(field.key) >= 0) {
+        if (value && skipped.indexOf(field.label) < 0) skipped.push(field.label);
+      } else if (value) {
+        text = setField(text, field.key, value, field.heading);
+        if (filled.indexOf(field.label) < 0) filled.push(field.label);
+      }
+    });
+    return { text: text, filled: filled, ignored: ignored, skipped: skipped };
   }
 
   // ---------- a small Markdown renderer, for previews ----------
@@ -433,7 +468,7 @@
     };
   }
 
-  var api = { model: model, setField: setField, keyOf: keyOf, labelOf: labelOf, markdown: markdown, render: render };
+  var api = { model: model, setField: setField, applyDocument: applyDocument, keyOf: keyOf, labelOf: labelOf, markdown: markdown, render: render };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.D2SForm = api;
 })(typeof window !== 'undefined' ? window : this);
