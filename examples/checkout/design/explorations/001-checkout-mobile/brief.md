@@ -4,6 +4,7 @@ title: Mobile checkout drop-off
 stage: handoff
 owner: Product lead
 created: 2026-11-08
+decided: 2026-11-06
 ---
 
 # Mobile checkout drop-off

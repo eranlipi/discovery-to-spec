@@ -16,4 +16,7 @@ It addresses the strongest insight (the long form) and fits in three weeks.
 Track the mobile completion rate and the number of payment-related support tickets.
 
 ## Approved by
-Fictional example: the product manager, the design lead and the engineering lead.
+<!-- One line per person: name, role, date, and optionally a GitHub handle. E.g. "- Dana Levi, design, 2026-11-20, @danalevi". Every role in .d2s.json must approve (product, design and engineering by default). Only people approve, never an AI agent, and "TBD" is not an approval. -->
+- Maya Cohen, product, 2026-11-05
+- Noa Levi, design, 2026-11-05
+- Amir Katz, engineering, 2026-11-06

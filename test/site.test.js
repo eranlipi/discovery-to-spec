@@ -62,3 +62,55 @@ test('the sandbox runs the real CLI in memory', () => {
   assert.equal(d2s.run(['init', '--lang', 'he']).code, 0);
   assert.match(d2s.read('design/templates/brief.md'), /## הבעיה/);
 });
+
+test('the stage form reads and writes the same Markdown the CLI checks', () => {
+  const Form = require('../site/src/stage-form.js');
+  const lib = require('../src/lib.js');
+  const template = lib.packagedTemplate('en', 'brief');
+  let doc = lib.render(template, { id: '001-x', title: 'X', date: '2026-11-08', owner: 'Dana' });
+
+  const m = Form.model(doc, template);
+  assert.deepEqual(m.fields.map((f) => f.label), ['Problem', 'Who it matters to', 'Desired outcome', 'Appetite', 'No-gos', 'Open questions']);
+  assert.equal(m.fields[5].optional, true, '"(optional)" becomes a badge');
+  assert.match(m.fields[0].helper, /^What isn't working today/, 'the template note is the helper text');
+  assert.match(m.intro, /^Stage 1 of 6: frame/);
+
+  doc = Form.setField(doc, 'problem', 'Users abandon checkout.\n## Not a new section');
+  assert.match(doc, /## Problem\n<!-- What isn't working[^\n]*-->\nUsers abandon checkout\.\n### Not a new section\n\n## Who it matters to/);
+  assert.equal(Form.model(doc, template).fields[0].value, 'Users abandon checkout.\n### Not a new section');
+  doc = Form.setField(doc, 'problem', '');
+  assert.equal(Form.model(doc, template).fields[0].value, '', 'clearing a field keeps the note and the heading');
+  assert.match(doc, /^stage: frame$/m, 'front matter is untouched');
+});
+
+test('the preview escapes HTML and only links http(s) URLs', () => {
+  const Form = require('../site/src/stage-form.js');
+  const html = Form.markdown('---\nid: x\n---\n\n## Title\n<script>alert(1)</script>\n\n- [ok](https://example.com/a?b=1&c=2)\n- [bad](javascript:alert(1))\n\n| A | B |\n| --- | --- |\n| `x` | **y** |\n');
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.match(html, /<a href="https:\/\/example\.com\/a\?b=1&amp;c=2"/);
+  assert.doesNotMatch(html, /href="javascript/);
+  assert.match(html, /<h3>Title<\/h3>/);
+  assert.match(html, /<td><code>x<\/code><\/td><td><strong>y<\/strong><\/td>/);
+  assert.doesNotMatch(html, /id: x/, 'front matter is not shown');
+});
+
+test('each sandbox view gets its own project, and status fits the terminal', () => {
+  const html = fs.readFileSync(path.join(buildSite(), 'index.html'), 'utf8');
+  const m = html.match(/<script id="d2s-sandbox">([\s\S]*?)<\/script>/);
+  const context = { window: {} };
+  vm.runInNewContext(m[1], context);
+  const designer = context.window.D2S_NEW();
+  const developer = context.window.D2S;
+  assert.equal(designer.run(['init', '--cli', 'd2s']).code, 0);
+  assert.equal(developer.files().length, 0, 'the two views do not share files');
+
+  designer.run(['new', 'A very long exploration title that would wrap the table', '--slug', 'long']);
+  const wide = designer.run(['status']).lines.join('\n');
+  const narrow = designer.run(['status'], { columns: 70 }).lines;
+  assert.match(wide, /A very long exploration title that would wrap the table/);
+  assert.match(narrow.join('\n'), / A very long explorat… /);
+  assert.ok(narrow.every((l) => l.length <= 70), 'every line fits in 70 columns');
+
+  assert.match(designer.run(['check', '--verify-approvals']).lines.join('\n'), /verification is off/, 'no network in the browser');
+});

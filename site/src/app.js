@@ -45,12 +45,20 @@
       var he = I18N.he[el.getAttribute('data-i18n')];
       el.innerHTML = lang === 'he' && typeof he === 'string' ? he : el.dataset.en;
     });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function (el) {
+      if (el.dataset.enAria === undefined) el.dataset.enAria = el.getAttribute('aria-label') || '';
+      var he = I18N.he[el.getAttribute('data-i18n-aria')];
+      el.setAttribute('aria-label', lang === 'he' && typeof he === 'string' ? he : el.dataset.enAria);
+    });
     document.title = lang === 'he' ? I18N.he.meta.title : EN_META.title;
     if (metaDesc) metaDesc.setAttribute('content', lang === 'he' ? I18N.he.meta.description : EN_META.description);
     document.querySelectorAll('[data-lang]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang));
     });
     store.set('d2s-lang', lang);
+    try {
+      document.dispatchEvent(new CustomEvent('d2s:lang', { detail: lang }));
+    } catch (e) { /* old browser: the Designer view keeps its language */ }
     if (sandboxReady) {
       renderChips();
       renderTree();
@@ -74,28 +82,30 @@
     setTimeout(function () { btn.innerHTML = before; }, 1400);
   });
 
-  // ---------- install tabs ----------
+  // ---------- tabs (install methods, sandbox views) ----------
 
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
-  function selectTab(tab) {
-    tabs.forEach(function (t) {
-      var on = t === tab;
-      t.setAttribute('aria-selected', String(on));
-      t.tabIndex = on ? 0 : -1;
-      var panel = document.getElementById(t.getAttribute('aria-controls'));
-      if (panel) panel.hidden = !on;
-    });
-  }
-  tabs.forEach(function (tab, i) {
-    tab.addEventListener('click', function () { selectTab(tab); });
-    tab.addEventListener('keydown', function (e) {
-      var rtl = root.getAttribute('dir') === 'rtl';
-      var step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 }[e.key];
-      if (!step) return;
-      e.preventDefault();
-      var next = tabs[(i + step + tabs.length) % tabs.length];
-      selectTab(next);
-      next.focus();
+  document.querySelectorAll('[role="tablist"]').forEach(function (list) {
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+    function selectTab(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        var panel = document.getElementById(t.getAttribute('aria-controls'));
+        if (panel) panel.hidden = !on;
+      });
+    }
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener('click', function () { selectTab(tab); });
+      tab.addEventListener('keydown', function (e) {
+        var rtl = root.getAttribute('dir') === 'rtl';
+        var step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        var next = tabs[(i + step + tabs.length) % tabs.length];
+        selectTab(next);
+        next.focus();
+      });
     });
   });
 
@@ -192,7 +202,7 @@
       state.num = String(parseInt(exp.id, 10));
       state.stage = stage;
       state.doc = D2S.path.relative(D2S.cwd, D2S.path.join(exp.dir, stage.file));
-      state.errors = lib.checkStageDoc(ctx, exp, stage).errors;
+      state.issues = lib.checkStageDoc(ctx, exp, stage).issues.filter(function (i) { return i.level === 'error'; });
       state.approvalKey = lib.KEY_SECTIONS[ctx.lang].approvedBy;
       return state;
     } catch (e) {
@@ -200,32 +210,43 @@
     }
   }
 
-  function suggestions() {
+  /**
+   * Three chips in fixed places: the next step, a sandbox shortcut, and status.
+   * A chip that doesn't apply is disabled, never removed, so a second click
+   * can't land on a different command.
+   */
+  function chipSlots() {
     var p = project();
-    if (!p) return [lang === 'he' ? 'd2s init --lang he' : 'd2s init', 'd2s help'];
+    var noFill = { cmd: 'fill', helper: true, disabled: true };
+    if (!p) return [{ cmd: lang === 'he' ? 'd2s init --lang he' : 'd2s init' }, noFill, { cmd: 'd2s help' }];
     if (!p.exp) {
-      var list = [p.lang === 'he'
-        ? 'd2s new "נטישה בתהליך התשלום במובייל" --slug checkout'
-        : 'd2s new "Checkout drop-off on mobile" --slug checkout'];
-      if (p.hasArchived) list.push('d2s status --all');
-      return list;
+      return [
+        { cmd: p.lang === 'he' ? 'd2s new "נטישה בתהליך התשלום במובייל" --slug checkout' : 'd2s new "Checkout drop-off on mobile" --slug checkout' },
+        noFill,
+        { cmd: p.hasArchived ? 'd2s status --all' : 'd2s status' },
+      ];
     }
-    if (p.stage.id === 'handoff') return ['cat design/decisions.md', 'd2s status ' + p.num, 'd2s archive ' + p.num];
-    if (!p.errors.length) return ['d2s next ' + p.num, 'd2s status ' + p.num];
-    var onlyApproval = p.stage.id === 'decide' && p.errors.every(function (e) { return e.indexOf(p.approvalKey) >= 0; });
-    if (onlyApproval) return ['d2s next ' + p.num, 'approve'];
-    return ['fill', 'd2s next ' + p.num, 'd2s status ' + p.num];
+    if (p.stage.id === 'handoff') {
+      return [{ cmd: 'd2s archive ' + p.num }, { cmd: 'cat design/decisions.md', helper: true }, { cmd: 'd2s status ' + p.num }];
+    }
+    var approvalGaps = p.issues.filter(function (i) { return i.section === p.approvalKey; });
+    var otherGaps = p.issues.length - approvalGaps.length;
+    var helper = p.stage.id === 'decide' && approvalGaps.length && !otherGaps
+      ? { cmd: 'approve', helper: true }
+      : { cmd: 'fill', helper: true, disabled: !otherGaps };
+    return [{ cmd: 'd2s next ' + p.num }, helper, { cmd: 'd2s status ' + p.num }];
   }
 
   function renderChips() {
     chipsEl.innerHTML = '';
-    suggestions().forEach(function (cmd) {
+    chipSlots().forEach(function (slot) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'chip' + (cmd === 'fill' || cmd === 'approve' ? ' helper' : '');
+      b.className = 'chip' + (slot.helper ? ' helper' : '');
       b.dir = 'ltr';
-      b.textContent = cmd;
-      b.addEventListener('click', function () { exec(cmd); });
+      b.textContent = slot.cmd;
+      b.disabled = !!slot.disabled;
+      b.addEventListener('click', function () { exec(slot.cmd); });
       chipsEl.appendChild(b);
     });
   }
@@ -305,9 +326,11 @@
       if (!quiet) print('open: ' + (rel || '<file>') + ': no such file', 'l-err');
       return;
     }
+    var another = rel !== openFile;
     openFile = rel;
     editor.disabled = false;
     editor.value = D2S.read(rel);
+    if (another) editor.scrollTop = 0;
     var p = project();
     editor.dir = p && p.lang === 'he' && /\.md$/.test(rel) && rel.indexOf('design/') === 0 ? 'rtl' : 'ltr';
     pathEl.textContent = rel;
@@ -402,16 +425,30 @@
     }
   }
 
-  function approve(name) {
+  /** One line per person, from the sample decision, dated today. */
+  function exampleApprovers(l) {
+    var lib = D2S.lib;
+    var text = ((SAMPLES[l] || {})['decision.md'] || {})[lib.KEY_SECTIONS[l].approvedBy] || '';
+    return lib.parseApprovalLines(text)
+      .filter(function (a) { return a.ok; })
+      .map(function (a) { return lib.formatApprovalLine({ name: a.name, role: a.role, date: lib.today() }); })
+      .join('\n');
+  }
+
+  function approve(text) {
     var p = project();
     if (!p || !p.exp || p.stage.id !== 'decide') {
       print('Nothing to approve: no exploration is at the decision stage.', 'l-dim');
       return;
     }
-    var who = name || ui('approver', p.lang);
-    fillDoc(p.doc, {}, { approvalKey: p.approvalKey, only: p.approvalKey, value: who, lang: p.lang });
-    print('✔ Recorded "' + p.approvalKey + ': ' + who + '" in ' + p.doc + '.');
-    print('  Sandbox shortcut. In a real project, a real person approves. Now: d2s next ' + p.num, 'l-dim');
+    var value = text || exampleApprovers(p.lang);
+    fillDoc(p.doc, {}, { approvalKey: p.approvalKey, only: p.approvalKey, value: value, lang: p.lang });
+    if (text) print('✔ Wrote "' + text + '" under "' + p.approvalKey + '" in ' + p.doc + '.');
+    else {
+      print('✔ Recorded example approvers under "' + p.approvalKey + '" in ' + p.doc + ':');
+      print(value.replace(/^/gm, '  '), 'l-dim');
+    }
+    print('  Sandbox shortcut. In a real project, each person approves for themselves. Now: d2s next ' + p.num, 'l-dim');
   }
 
   // ----- shell -----
@@ -445,11 +482,48 @@
       '  ls [dir]         list files',
       '  cat <file>       print a file',
       '  open <file>      open a file in the editor',
-      '  fill             shortcut: write example text into the current doc',
-      '  approve [name]   shortcut: record who approved the decision',
       '  clear            clear the screen',
       '  reset            start the project over',
+      '',
+      'Sandbox shortcuts (not part of d2s):',
+      '  fill             write example text into the empty sections of the current doc',
+      '  approve          record example approvers in decision.md, one line per person',
+      '  approve <text>   write your own text instead, e.g. approve TBD',
     ].join('\n'), 'l-dim');
+  }
+
+  /** How many characters fit on one line of the terminal pane. */
+  var charWidth = 0;
+  function columns() {
+    if (!out.clientWidth) return 0;
+    if (!charWidth) {
+      var probe = document.createElement('span');
+      probe.textContent = '0123456789';
+      probe.style.visibility = 'hidden';
+      out.appendChild(probe);
+      charWidth = probe.getBoundingClientRect().width / 10;
+      out.removeChild(probe);
+    }
+    var style = window.getComputedStyle(out);
+    var inner = out.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return charWidth ? Math.floor(inner / charWidth) : 0;
+  }
+
+  /** "i have a project about checkout" reads like a description, not a command. */
+  function looksLikeText(s, argv) {
+    if (/[\u0590-\u05FF]/.test(s)) return true;
+    return argv.length >= 3 && /^[a-z]+$/i.test(argv[0]) && !/^(d2s|npx|npm|node|git)$/.test(argv[0]);
+  }
+
+  function offerNew(s) {
+    var title = s.replace(/["“”]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    var suggestion = 'd2s new "' + title + '"';
+    var ready = !!project();
+    print('That reads like a description, not a command. To start an exploration from it, run:', 'l-dim');
+    if (!ready) print('  d2s init', 'l-ok');
+    print('  ' + suggestion, 'l-ok');
+    print(ready ? 'It is in the prompt below: press Enter.' : 'd2s init is in the prompt below: press Enter, then run the second line.', 'l-dim');
+    input.value = ready ? suggestion : 'd2s init';
   }
 
   function exec(cmdline) {
@@ -469,7 +543,7 @@
         var args = argv.slice(1);
         // In the sandbox the command is just "d2s", so generated hints should say so too.
         if (args[0] === 'init' && args.indexOf('--cli') < 0) args = args.concat(['--cli', 'd2s']);
-        var r = D2S.run(args);
+        var r = D2S.run(args, { columns: columns() });
         r.lines.forEach(function (l) { print(l); });
         break;
       case 'help': help(); break;
@@ -480,7 +554,9 @@
       case 'fill': fill(); break;
       case 'approve': approve(argv.slice(1).join(' ')); break;
       case 'reset': resetSandbox(); return;
-      default: print(argv[0] + ': command not found. Type help.', 'l-err');
+      default:
+        if (looksLikeText(s, argv)) offerNew(s);
+        else print(argv[0] + ': command not found. Type help.', 'l-err');
     }
     afterChange(before);
     out.scrollTop = out.scrollHeight;

@@ -111,7 +111,7 @@
     <li><code dir="ltr"><i>/d2s-</i>frame</code><span data-i18n="workflow.frame">frame the problem: who it hurts, the outcome you want, the appetite and the no-gos</span></li>
     <li><code dir="ltr"><i>/d2s-</i>research</code><span data-i18n="workflow.research">turn interviews, tickets and data into insights with evidence</span></li>
     <li><code dir="ltr"><i>/d2s-</i>options</code><span data-i18n="workflow.options">lay out 2 to 4 genuinely different directions, each linked to Figma</span></li>
-    <li class="gate"><code dir="ltr"><i>/d2s-</i>decide</code><span data-i18n="workflow.decide">choose one and record why. Only people approve, and nothing moves on without a name.</span></li>
+    <li class="gate"><code dir="ltr"><i>/d2s-</i>decide</code><span data-i18n="workflow.decide">choose one and record why. Only people approve: product, design and engineering, each by name.</span></li>
     <li><code dir="ltr"><i>/d2s-</i>spec</code><span data-i18n="workflow.spec">every screen, state and edge case, with acceptance criteria you can test</span></li>
     <li><code dir="ltr"><i>/d2s-</i>handoff</code><span data-i18n="workflow.handoff">one generated doc for development. Rejected directions stay out.</span></li>
   </ol>
@@ -120,35 +120,72 @@
 
 <section id="sandbox" class="wrap block" aria-labelledby="sandbox-title">
   <h2 id="sandbox-title" class="sec"><span class="sec-num" dir="ltr">03</span><span data-i18n="sandbox.title">Try it in your browser</span></h2>
-  <p class="intro" data-i18n="sandbox.intro">This is the real <code dir="ltr">d2s</code>, running inside this page on a pretend project. Nothing is installed and nothing leaves your browser. Run the suggested commands, edit the docs, and watch the decision gate stop you.</p>
-  <div class="sandbox">
-    <div class="sb-bar">
-      <span class="sb-try" data-i18n="sandbox.try">Try</span>
-      <div class="chips" id="sb-chips"></div>
-      <button type="button" class="sb-reset" id="sb-reset" data-i18n="sandbox.reset">Start over</button>
-    </div>
-    <div class="sb-panes">
-      <div class="sb-files">
-        <div class="pane-title" data-i18n="sandbox.files">Files</div>
-        <div id="sb-tree" class="tree" role="group" aria-label="Project files" dir="ltr"></div>
-      </div>
-      <div class="sb-editor">
-        <div class="pane-title"><span id="sb-path" dir="ltr">—</span><span class="saved" data-i18n="sandbox.saved">edits save in this tab</span></div>
-        <label for="sb-text" class="sr-only" data-i18n="sandbox.editorLabel">File contents</label>
-        <textarea id="sb-text" spellcheck="false" disabled></textarea>
-      </div>
-      <div class="sb-term" dir="ltr">
-        <div class="pane-title">~/your-project</div>
-        <div id="sb-out" class="term-out" role="log" aria-live="polite"></div>
-        <form id="sb-form" class="term-in" autocomplete="off">
-          <span class="prompt">$</span>
-          <label for="sb-input" class="sr-only">Command</label>
-          <input id="sb-input" type="text" spellcheck="false" autocapitalize="off" placeholder="d2s help">
-        </form>
-      </div>
-    </div>
+  <p class="intro" data-i18n="sandbox.intro">This is the real <code dir="ltr">d2s</code>, running inside this page on a sample project. Designers fill in forms and press Next stage; developers drive the same files from a terminal. Nothing is installed and nothing leaves your browser.</p>
+  <div class="tabs view-tabs" role="tablist" aria-label="Sandbox view">
+    <button type="button" role="tab" id="tab-designer" aria-controls="panel-designer" aria-selected="true" data-i18n="sandbox.tabDesigner">Designer</button>
+    <button type="button" role="tab" id="tab-developer" aria-controls="panel-developer" aria-selected="false" tabindex="-1" data-i18n="sandbox.tabDeveloper">Developer</button>
   </div>
-  <p class="note" data-i18n="sandbox.note"><code dir="ltr">fill</code> and <code dir="ltr">approve</code> are sandbox shortcuts that write example text. In a real project, your team writes the docs, and a real person approves.</p>
+  <div role="tabpanel" id="panel-designer" aria-labelledby="tab-designer">
+    <div class="designer" id="dz">
+      <div class="dz-bar">
+        <div class="dz-heading"><span class="dz-title"></span><span class="dz-meta"></span></div>
+        <div class="dz-tools">
+          <button type="button" class="tool-btn dz-toggle" aria-pressed="false" data-i18n="sandbox.showFile">Show the file</button>
+          <button type="button" class="tool-btn dz-reset" data-i18n="sandbox.reset">Start over</button>
+        </div>
+      </div>
+      <div class="dz-body">
+        <nav class="dz-rail" aria-label="Stages" data-i18n-aria="sandbox.stagesLabel"><ol></ol></nav>
+        <div class="dz-main">
+          <p class="dz-step"></p>
+          <p class="dz-intro"></p>
+          <div class="dz-notice" tabindex="-1" role="status" hidden></div>
+          <div class="dz-form"></div>
+          <div class="dz-preview md" hidden></div>
+          <div class="dz-actions">
+            <button type="button" class="btn primary dz-next" data-i18n="sandbox.next">Next stage</button>
+            <button type="button" class="btn dz-example" data-i18n="sandbox.example">Use example text</button>
+          </div>
+        </div>
+        <aside class="dz-file" hidden>
+          <div class="pane-title"><span class="dz-file-path" dir="ltr"></span></div>
+          <p class="dz-file-note" data-i18n="sandbox.fileNote">This is the file in the repo. The form reads it and writes it back.</p>
+          <pre class="dz-file-text"></pre>
+        </aside>
+      </div>
+    </div>
+    <p class="note" data-i18n="sandbox.designerNote">Every field is a <code dir="ltr">##</code> heading in the template, and its guidance note is the helper text. <b>Use example text</b> fills empty fields with a sample. In a real project, your team writes them and real people approve.</p>
+  </div>
+  <div role="tabpanel" id="panel-developer" aria-labelledby="tab-developer" hidden>
+    <div class="sandbox">
+      <div class="sb-bar">
+        <span class="sb-try" data-i18n="sandbox.try">Try</span>
+        <div class="chips" id="sb-chips"></div>
+        <button type="button" class="sb-reset" id="sb-reset" data-i18n="sandbox.reset">Start over</button>
+      </div>
+      <div class="sb-panes">
+        <div class="sb-files">
+          <div class="pane-title" data-i18n="sandbox.files">Files</div>
+          <div id="sb-tree" class="tree" role="group" aria-label="Project files" dir="ltr"></div>
+        </div>
+        <div class="sb-editor">
+          <div class="pane-title"><span id="sb-path" dir="ltr">—</span><span class="saved" data-i18n="sandbox.saved">edits save in this tab</span></div>
+          <label for="sb-text" class="sr-only" data-i18n="sandbox.editorLabel">File contents</label>
+          <textarea id="sb-text" spellcheck="false" disabled></textarea>
+        </div>
+        <div class="sb-term" dir="ltr">
+          <div class="pane-title">~/your-project</div>
+          <div id="sb-out" class="term-out" role="log" aria-live="polite"></div>
+          <form id="sb-form" class="term-in" autocomplete="off">
+            <span class="prompt">$</span>
+            <label for="sb-input" class="sr-only">Command</label>
+            <input id="sb-input" type="text" spellcheck="false" autocapitalize="off" placeholder="d2s help">
+          </form>
+        </div>
+      </div>
+    </div>
+    <p class="note" data-i18n="sandbox.note"><code dir="ltr">fill</code> and <code dir="ltr">approve</code> are sandbox shortcuts that write example text. Try <code dir="ltr">approve TBD</code> to watch the gate refuse it. In a real project, your team writes the docs and real people approve.</p>
+  </div>
 </section>
 
 <section id="stages" class="wrap block" aria-labelledby="stages-title">
@@ -181,8 +218,8 @@
   <h2 id="principles-title" class="sec"><span class="sec-num" dir="ltr">06</span><span data-i18n="principles.title">Easy to say yes to</span></h2>
   <div class="grid4">
     <div><h3 data-i18n="principles.p1">MIT, no paid tier</h3><p data-i18n="principles.p1t">Free to use, change and ship, for teams of any size.</p></div>
-    <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 800 lines of plain Node.js. Your security team can read all of it.</p></div>
-    <div><h3 data-i18n="principles.p3">No network, no telemetry</h3><p data-i18n="principles.p3t">It only reads and writes Markdown files in your repository.</p></div>
+    <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 1,150 lines of plain Node.js. Your security team can read all of it.</p></div>
+    <div><h3 data-i18n="principles.p3">No telemetry</h3><p data-i18n="principles.p3t">It reads and writes Markdown files in your repository. The only network call is an opt-in CI check that asks GitHub who approved.</p></div>
     <div><h3 data-i18n="principles.p4">No new licenses</h3><p data-i18n="principles.p4t">Works with the GitHub and Figma you already have. AI agents are optional.</p></div>
   </div>
 </section>
@@ -190,10 +227,10 @@
 <section id="faq" class="wrap block" aria-labelledby="faq-title">
   <h2 id="faq-title" class="sec"><span class="sec-num" dir="ltr">07</span><span data-i18n="faq.title">Questions</span></h2>
   <div class="faq">
-    <details><summary data-i18n="faq.q1">Do designers need a terminal?</summary><p data-i18n="faq.a1">No. Every doc is plain Markdown. Designers and product managers edit them on github.com, or write in Figma or a doc and someone pastes it in. Whoever runs the tool, usually a developer, needs a few short commands.</p></details>
+    <details><summary data-i18n="faq.q1">Do designers need a terminal?</summary><p data-i18n="faq.a1">No. Try the Designer view above: every stage is a form with a Next stage button, and it writes the same Markdown files the CLI does. Today designers and product managers can also edit the files on github.com, or write in Figma or a doc and have someone paste it in. A Figma plugin is planned.</p></details>
     <details><summary data-i18n="faq.q2">Does it replace OpenSpec?</summary><p data-i18n="faq.a2">No, it comes before it. OpenSpec starts once you know the change you want. discovery-to-spec helps you get there, and drafts an OpenSpec proposal when you do.</p></details>
     <details><summary data-i18n="faq.q3">Do we need a paid Figma plan?</summary><p data-i18n="faq.a3">No. Figma links are plain links in the docs. Agents can read the frames through the Figma MCP server if you use it, but nothing depends on it.</p></details>
-    <details><summary data-i18n="faq.q4">Can an AI agent approve a decision?</summary><p data-i18n="faq.a4">No. The skills tell agents never to fill in who approved, and the gate won’t pass without a name. Agents help you write; people decide.</p></details>
+    <details><summary data-i18n="faq.q4">Can an AI agent approve a decision?</summary><p data-i18n="faq.a4">No. The skills tell agents never to fill in who approved, and the gate wants one line per person with a name, role and date. It rejects placeholders like “TBD” and the names of AI tools, and it can check each approval against a GitHub review. Agents help you write; people decide.</p></details>
     <details><summary data-i18n="faq.q5">Can we change the templates?</summary><p data-i18n="faq.a5">Yes. They live in <code dir="ltr">design/templates</code> in your repo. Every heading is required unless it’s marked optional, and the check follows your version.</p></details>
     <details><summary data-i18n="faq.q6">Which languages are supported?</summary><p data-i18n="faq.a6">Templates come in English and Hebrew, right to left included. The CLI’s own messages are in English. More languages are welcome as contributions.</p></details>
   </div>
@@ -213,6 +250,8 @@
 <script id="d2s-sandbox">/*@sandbox*/</script>
 <script>/*@data*/</script>
 <script>/*@i18n*/</script>
+<script>/*@form*/</script>
+<script>/*@designer*/</script>
 <script>/*@app*/</script>
 </body>
 </html>

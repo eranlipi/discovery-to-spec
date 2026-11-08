@@ -36,6 +36,19 @@ const KEY_SECTIONS = {
   },
 };
 
+// Roles that approve at the decision gate. The key is what .d2s.json uses; the
+// aliases are what people write in decision.md, in either language.
+const ROLES = {
+  product: { en: 'product', he: 'מוצר', aliases: ['product', 'pm', 'product management', 'מוצר', 'ניהול מוצר'] },
+  design: { en: 'design', he: 'עיצוב', aliases: ['design', 'ux', 'designer', 'עיצוב', 'מעצב', 'מעצבת'] },
+  engineering: {
+    en: 'engineering',
+    he: 'פיתוח',
+    aliases: ['engineering', 'eng', 'dev', 'development', 'engineer', 'פיתוח', 'הנדסה', 'מפתח', 'מפתחת'],
+  },
+};
+const DEFAULT_APPROVALS = { roles: ['product', 'design', 'engineering'], allowSamePerson: false, verify: 'none' };
+
 class UserError extends Error {}
 
 // ---------- files ----------
@@ -197,9 +210,11 @@ function loadContext(cwd = process.cwd()) {
   const lang = LANGS.includes(config.lang) ? config.lang : 'en';
   const dir = config.dir || 'design';
   const designDir = path.join(root, dir);
+  const approvals = { ...DEFAULT_APPROVALS, ...(config.approvals || {}) };
+  if (!Array.isArray(approvals.roles)) approvals.roles = DEFAULT_APPROVALS.roles;
   return {
     root,
-    config: { ...config, lang, dir, cli: config.cli || 'npx d2s' },
+    config: { ...config, lang, dir, cli: config.cli || 'npx d2s', approvals },
     lang,
     designDir,
     explorationsDir: path.join(designDir, 'explorations'),
@@ -241,6 +256,7 @@ function readExploration(ctx, id, archived = false) {
     title: fm.title || id,
     stage: archived ? ARCHIVED : fm.stage || 'frame',
     owner: fm.owner || '',
+    decided: fm.decided || '',
   };
 }
 
@@ -277,47 +293,214 @@ function stageIndex(stageId) {
   return STAGES.findIndex((s) => s.id === stageId);
 }
 
+// ---------- approvals ----------
+//
+// "Approved by" holds one line per person: name, role, date, and an optional
+// GitHub handle. A name typed into a field is not an approval, so the gate
+// rejects placeholders, AI tools and missing roles.
+
+const PLACEHOLDER_WORDS = new Set([
+  'tbd', 'tbc', 'todo', 'n/a', 'pending', 'unknown', '?', '??', '???',
+  'טרם', 'ממתין', 'ממתינה', 'ממתינים', 'יעודכן', 'בהמשך', 'להשלים',
+]);
+const PLACEHOLDER_PHRASES = ['to be decided', 'to be confirmed', 'טרם נקבע', 'לא ידוע', 'לא רלוונטי', 'יוחלט בהמשך'];
+const AGENT_RE = /\b(claude code|chatgpt|gpt(?:-?\d[\w.]*)?|copilot|gemini|cursor|codex|openai|anthropic|llm|agent|bot)\b|\((?:ai|bot)\)|(^|\s)(סוכן|בוט)(\s|$)/i;
+const AGENT_NAMES = new Set(['claude', 'ai', 'בינה מלאכותית']);
+const AGENT_HANDLE_RE = /\[bot\]$|^@(claude|copilot|cursor|chatgpt|gemini|codex|openai)\b/i;
+const HANDLE_RE = /^@[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$/;
+
+const APPROVAL_TEXT = {
+  en: {
+    format: (h, line) => `"${h}" needs one line per person: name, role, date (check "${line}")`,
+    placeholder: (word) => `"${word}" is not an approval. Add the people who approved`,
+    missing: (roles) => `Missing approval from: ${roles}`,
+    agent: (name) => `Only people approve. Remove "${name}"`,
+    twice: (name) => `${name} is listed for two roles`,
+    handle: (name) => `${name} needs a GitHub handle (like @name), so the approval can be verified`,
+    notApproved: (handle) => `${handle} has not approved this pull request on GitHub`,
+    legacy: ' (approved before d2s 0.2.0: use the new format next time you edit it)',
+  },
+  he: {
+    format: (h, line) => `ב"${h}" צריך שורה לכל אדם: שם, תפקיד, תאריך (בדקו את "${line}")`,
+    placeholder: (word) => `"${word}" הוא לא אישור. כתבו מי אישר`,
+    missing: (roles) => `חסר אישור של: ${roles}`,
+    agent: (name) => `רק אנשים מאשרים. הסירו את "${name}"`,
+    twice: (name) => `השם ${name} מופיע בשני תפקידים`,
+    handle: (name) => `חסר שם משתמש ב-GitHub ל-${name} (כמו @name), ולכן אי אפשר לאמת את האישור`,
+    notApproved: (handle) => `אין עדיין אישור של ${handle} ל-pull request הזה ב-GitHub`,
+    legacy: ' (אושר לפני d2s 0.2.0: עדכנו לפורמט החדש בעריכה הבאה)',
+  },
+};
+
+function approvalText(lang) {
+  return APPROVAL_TEXT[lang] || APPROVAL_TEXT.en;
+}
+
+/** "Design lead", "עיצוב" and "UX" all mean the design role. Unknown roles come back as written. */
+function roleKey(text) {
+  const r = String(text)
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s+(lead|manager|owner|director|head)$/, '')
+    .replace(/^(head of|ראש צוות|ראש|מנהל|מנהלת)\s+/, '');
+  for (const [key, role] of Object.entries(ROLES)) if (role.aliases.includes(r)) return key;
+  return r;
+}
+
+function roleLabel(key, lang) {
+  return ROLES[key] ? ROLES[key][lang] || ROLES[key].en : key;
+}
+
+function isDate(text) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const d = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === text;
+}
+
+/** Each non-empty line of "Approved by" as { name, role, roleKey, date, handle, ok }. */
+function parseApprovalLines(content) {
+  return stripComments(content)
+    .split(/\r?\n/)
+    .map((l) => l.trim().replace(/^([-*+]|\d+[.)])\s+/, '').trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split(/\s*,\s*/);
+      const [name = '', role = '', date = '', handle = ''] = parts;
+      const ok =
+        (parts.length === 3 || parts.length === 4) &&
+        !!name &&
+        !!role &&
+        isDate(date) &&
+        (parts.length === 3 || HANDLE_RE.test(handle));
+      return { line, name, role, roleKey: roleKey(role), date, handle: parts.length === 4 ? handle : '', ok };
+    });
+}
+
+function formatApprovalLine({ name, role, date, handle }) {
+  return `- ${[name, role, date, handle].map((s) => String(s || '').replace(/[,\n]/g, ' ').trim()).filter(Boolean).join(', ')}`;
+}
+
+function placeholderIn(text) {
+  const lower = text.toLowerCase();
+  for (const p of PLACEHOLDER_PHRASES) {
+    const i = lower.indexOf(p);
+    if (i >= 0) return text.slice(i, i + p.length);
+  }
+  return text.split(/[\s,;:()[\]"'.]+/).find((w) => PLACEHOLDER_WORDS.has(w.toLowerCase())) || '';
+}
+
+function agentIn(entry) {
+  const name = entry.name.replace(/\s+/g, ' ').trim();
+  if (AGENT_NAMES.has(name.toLowerCase()) || AGENT_RE.test(name)) return name;
+  if (entry.handle && AGENT_HANDLE_RE.test(entry.handle)) return entry.handle;
+  if (!entry.ok) {
+    // A free-text line: name the tool it mentions, if any.
+    const m = entry.line.match(/\bclaude\b/i) || entry.line.match(AGENT_RE);
+    if (m) return m[0].trim();
+  }
+  return '';
+}
+
+/**
+ * Validate the content of "Approved by". Returns plain-language problems.
+ * `settings` is .d2s.json's `approvals` plus `lang` and the section `heading`.
+ */
+function checkApprovals(content, settings) {
+  const s = { ...DEFAULT_APPROVALS, ...settings };
+  const t = approvalText(s.lang);
+  const problems = [];
+  const valid = [];
+  for (const e of parseApprovalLines(content)) {
+    const word = placeholderIn(e.line);
+    const agent = word ? '' : agentIn(e);
+    if (word) problems.push(t.placeholder(word));
+    else if (agent) problems.push(t.agent(agent));
+    else if (!e.ok) problems.push(t.format(s.heading || KEY_SECTIONS[s.lang === 'he' ? 'he' : 'en'].approvedBy, e.line));
+    else {
+      if (s.verify === 'github-pr' && !e.handle) problems.push(t.handle(e.name));
+      valid.push(e);
+    }
+  }
+  if (problems.length) return problems;
+
+  const have = new Set(valid.map((e) => e.roleKey));
+  const missing = s.roles.map(roleKey).filter((r) => !have.has(r));
+  if (missing.length) problems.push(t.missing(missing.map((r) => roleLabel(r, s.lang)).join(', ')));
+
+  if (!s.allowSamePerson) {
+    const roles = new Map();
+    for (const e of valid) {
+      const key = e.name.toLowerCase().replace(/\s+/g, ' ');
+      if (!roles.has(key)) roles.set(key, { name: e.name, roles: new Set() });
+      roles.get(key).roles.add(e.roleKey);
+    }
+    for (const p of roles.values()) if (p.roles.size > 1) problems.push(t.twice(p.name));
+  }
+  return problems;
+}
+
 // ---------- validation ----------
 
 /**
  * Check one stage document against its template.
  * Every `## ` section in the template is required unless marked (optional).
+ * Returns `errors` and `warnings` as printable lines, and `issues` with the
+ * section each problem belongs to, for interfaces that show it next to a field.
+ * `legacyApprovals` turns approval-format problems into warnings, for decisions
+ * that passed the gate before d2s 0.2.0.
  */
-function checkStageDoc(ctx, exp, stage) {
-  const errors = [];
-  const warnings = [];
+function checkStageDoc(ctx, exp, stage, { legacyApprovals = false } = {}) {
+  const issues = [];
+  const add = (level, section, code, message) => issues.push({ level, section, code, message });
   const file = path.join(exp.dir, stage.file);
   const rel = path.relative(ctx.root, file);
+  const result = () => ({
+    errors: issues.filter((i) => i.level === 'error').map((i) => `${rel}: ${i.message}`),
+    warnings: issues.filter((i) => i.level === 'warning').map((i) => `${rel}: ${i.message}`),
+    issues,
+  });
   if (!exists(file)) {
-    errors.push(`${rel}: file is missing`);
-    return { errors, warnings };
+    add('error', null, 'file', 'file is missing');
+    return result();
   }
-  if (stage.id === 'handoff') return { errors, warnings }; // generated
+  if (stage.id === 'handoff') return result(); // generated
 
   const text = readText(file);
   const body = parseFrontMatter(text).body;
   const leftover = stripComments(body).match(/\{\{\w+\}\}/g);
-  if (leftover) errors.push(`${rel}: unfilled placeholder ${[...new Set(leftover)].join(', ')}`);
+  if (leftover) add('error', null, 'placeholder', `unfilled placeholder ${[...new Set(leftover)].join(', ')}`);
 
   const docSections = parseSections(body);
   const templateSections = parseSections(parseFrontMatter(getTemplate(ctx, stage.template)).body);
   for (const t of templateSections) {
     if (t.optional) continue;
     const s = findSection(docSections, t.heading);
-    if (!s) errors.push(`${rel}: missing section "${t.heading}"`);
-    else if (!s.content) errors.push(`${rel}: section "${t.heading}" is empty`);
+    if (!s) add('error', t.heading, 'missing', `missing section "${t.heading}"`);
+    else if (!s.content) add('error', t.heading, 'empty', `section "${t.heading}" is empty`);
   }
 
   if (stage.id === 'options' && figmaLinks(body).length === 0) {
-    warnings.push(`${rel}: no Figma links yet — link each direction to its frames`);
+    add('warning', null, 'figma', 'no Figma links yet — link each direction to its frames');
+  }
+  if (stage.id === 'decide') {
+    const heading = KEY_SECTIONS[ctx.lang].approvedBy;
+    const s = findSection(docSections, heading);
+    if (s && s.content) {
+      const settings = { ...(ctx.config.approvals || {}), lang: ctx.lang, heading };
+      for (const message of checkApprovals(s.content, settings)) {
+        if (legacyApprovals) add('warning', heading, 'approval', message + approvalText(ctx.lang).legacy);
+        else add('error', heading, 'approval', message);
+      }
+    }
   }
   if (stage.id === 'spec') {
     const criteria = findSection(docSections, KEY_SECTIONS[ctx.lang].criteria);
     if (criteria && criteria.content && !/(given|בהינתן)/i.test(criteria.content)) {
-      warnings.push(`${rel}: acceptance criteria are easier to test as Given / When / Then`);
+      add('warning', criteria.heading, 'criteria', 'acceptance criteria are easier to test as Given / When / Then');
     }
   }
-  return { errors, warnings };
+  return result();
 }
 
 /**
@@ -335,7 +518,9 @@ function checkExploration(ctx, exp, { strict = false } = {}) {
   }
   STAGES.forEach((stage, i) => {
     if (i > current) return;
-    const r = checkStageDoc(ctx, exp, stage);
+    // Decisions that passed the gate before 0.2.0 carry no "decided" date; their approvals only warn.
+    const legacyApprovals = stage.id === 'decide' && i < current && !exp.decided;
+    const r = checkStageDoc(ctx, exp, stage, { legacyApprovals });
     if (i < current || strict) errors.push(...r.errors);
     else warnings.push(...r.errors.map((e) => `${e} (in progress)`));
     warnings.push(...r.warnings);
@@ -350,6 +535,8 @@ module.exports = {
   STAGES,
   ARCHIVED,
   KEY_SECTIONS,
+  ROLES,
+  DEFAULT_APPROVALS,
   UserError,
   exists,
   readText,
@@ -375,6 +562,12 @@ module.exports = {
   nextNumber,
   resolveExploration,
   stageIndex,
+  roleKey,
+  roleLabel,
+  approvalText,
+  parseApprovalLines,
+  formatApprovalLine,
+  checkApprovals,
   checkStageDoc,
   checkExploration,
 };

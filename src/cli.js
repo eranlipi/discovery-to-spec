@@ -33,10 +33,16 @@ const ok = (s) => log(`${c.green('✔')} ${s}`);
 const bad = (s) => log(`${c.red('✖')} ${s}`);
 const warn = (s) => log(`${c.yellow('!')} ${s}`);
 
-function table(rows) {
+/** Print aligned columns. With `fit`, column `fit.column` is cut short to fit `fit.width` characters. */
+function table(rows, fit) {
   const widths = rows[0].map((_, i) => Math.max(...rows.map((r) => String(r[i]).length)));
+  if (fit && fit.width > 0) {
+    const total = widths.reduce((a, b) => a + b, 0) + 2 * (widths.length - 1);
+    if (total > fit.width) widths[fit.column] = Math.max(12, widths[fit.column] - (total - fit.width));
+  }
+  const cut = (s, w) => (s.length > w ? s.slice(0, w - 1) + '…' : s);
   rows.forEach((r, ri) => {
-    log(r.map((cell, i) => String(cell).padEnd(widths[i])).join('  ').trimEnd());
+    log(r.map((cell, i) => cut(String(cell), widths[i]).padEnd(widths[i])).join('  ').trimEnd());
     if (ri === 0) log(widths.map((w) => '-'.repeat(w)).join('  '));
   });
 }
@@ -72,10 +78,19 @@ function init(flags) {
   if (lib.exists(cfgPath) && !flags.force) {
     throw new UserError(`Already initialized (${lib.CONFIG_FILE} exists). Use --force to refresh the agent files.`);
   }
-  const lang = flags.lang || 'en';
+  // --force keeps the existing settings unless a flag changes them.
+  let existing = {};
+  if (lib.exists(cfgPath)) {
+    try {
+      existing = JSON.parse(lib.readText(cfgPath)) || {};
+    } catch {
+      // unreadable config: start from the defaults
+    }
+  }
+  const lang = flags.lang || existing.lang || 'en';
   if (!lib.LANGS.includes(lang)) throw new UserError(`--lang must be one of: ${lib.LANGS.join(', ')}`);
-  const dir = typeof flags.dir === 'string' ? flags.dir.replace(/\/+$/, '') : 'design';
-  const cli = typeof flags.cli === 'string' ? flags.cli : defaultCli(root);
+  const dir = typeof flags.dir === 'string' ? flags.dir.replace(/\/+$/, '') : existing.dir || 'design';
+  const cli = typeof flags.cli === 'string' ? flags.cli : existing.cli || defaultCli(root);
   let agents = AGENTS;
   if (typeof flags.agents === 'string') {
     agents = flags.agents === 'none' ? [] : flags.agents.split(',').map((s) => s.trim()).filter(Boolean);
@@ -111,8 +126,9 @@ function init(flags) {
   if (agents.includes('agents-md')) results.push([upsertAgentsMd(root, lib.render(pkg('integrations/agents-md.md'), vars)), 'AGENTS.md']);
   if (flags.ci) put('.github/workflows/d2s-check.yml', lib.render(pkg('integrations/ci/d2s-check.yml'), vars), !!flags.force);
 
-  // Config last, so a failed init can simply be re-run
-  const config = { version: 1, lang, dir, cli };
+  // Config last, so a failed init can simply be re-run.
+  const approvals = existing.approvals || { ...lib.DEFAULT_APPROVALS };
+  const config = { version: 1, lang, dir, cli, approvals };
   lib.writeText(cfgPath, JSON.stringify(config, null, 2) + '\n');
   results.push([flags.force ? 'updated' : 'created', lib.CONFIG_FILE]);
 
@@ -194,7 +210,8 @@ function status(positional, flags) {
     log(`No explorations yet. Start one with: ${ctx.config.cli} new "Short name of the problem"`);
     return 0;
   }
-  table([['ID', 'STAGE', 'TITLE', 'NEXT'], ...list.map((e) => [e.id, stageLabel(e), e.title, nextStep(ctx, e)])]);
+  const rows = [['ID', 'STAGE', 'TITLE', 'NEXT'], ...list.map((e) => [e.id, stageLabel(e), e.title, nextStep(ctx, e)])];
+  table(rows, { column: 2, width: process.stdout.columns });
   return 0;
 }
 
@@ -227,18 +244,117 @@ function check(positional, flags) {
     log('No explorations to check.');
     return 0;
   }
-  let errorCount = 0;
-  for (const exp of targets) {
-    const r = lib.checkExploration(ctx, exp, { strict: !!flags.strict });
-    errorCount += r.errors.length;
-    if (!r.errors.length && !r.warnings.length) ok(`${exp.id} (${exp.stage})`);
-    else {
-      (r.errors.length ? bad : warn)(`${exp.id} (${exp.stage})`);
-      r.errors.forEach((e) => log(`    ${c.red('error')} ${e}`));
-      r.warnings.forEach((w) => log(`    ${c.yellow('warn ')} ${w}`));
+  const results = targets.map((exp) => ({ exp, ...lib.checkExploration(ctx, exp, { strict: !!flags.strict }) }));
+  if (flags['verify-approvals']) {
+    if (ctx.config.approvals.verify !== 'github-pr') {
+      log(c.dim('Approval verification is off. To turn it on, set "approvals": { "verify": "github-pr" } in .d2s.json.'));
+    } else {
+      const pr = pullRequest(flags);
+      return verifyApprovals(ctx, results, pr, { explicit: !!positional[0], strict: !!flags.strict })
+        .then(() => report(results, pr))
+        .catch((err) => {
+          bad(`Could not verify approvals on GitHub: ${err.message}`);
+          return 1;
+        });
     }
   }
+  return report(results);
+}
+
+function report(results, pr) {
+  let errorCount = 0;
+  for (const { exp, errors, warnings, verified } of results) {
+    errorCount += errors.length;
+    if (!errors.length && !warnings.length) ok(`${exp.id} (${exp.stage})`);
+    else {
+      (errors.length ? bad : warn)(`${exp.id} (${exp.stage})`);
+      errors.forEach((e) => log(`    ${c.red('error')} ${e}`));
+      warnings.forEach((w) => log(`    ${c.yellow('warn ')} ${w}`));
+    }
+    if (verified) log(c.dim(`    ${verified} approval(s) verified on pull request #${pr.number}`));
+  }
   return errorCount ? 1 : 0;
+}
+
+// ---------- approval verification (opt-in, for CI) ----------
+//
+// The only network access in d2s. It runs when check gets --verify-approvals
+// and .d2s.json sets approvals.verify to "github-pr", and only reads from GitHub.
+
+/** The pull request to verify against: --pr and --repo, or what GitHub Actions provides. */
+function pullRequest(flags) {
+  const env = process.env;
+  const token = env.GITHUB_TOKEN || env.GH_TOKEN;
+  const repo = typeof flags.repo === 'string' ? flags.repo : env.GITHUB_REPOSITORY;
+  let number = typeof flags.pr === 'string' ? flags.pr : '';
+  if (!number && env.GITHUB_EVENT_PATH && lib.exists(env.GITHUB_EVENT_PATH)) {
+    try {
+      const event = JSON.parse(lib.readText(env.GITHUB_EVENT_PATH));
+      number = String((event.pull_request && event.pull_request.number) || '');
+    } catch {
+      // not a JSON event file
+    }
+  }
+  if (!token) throw new UserError('--verify-approvals needs a GITHUB_TOKEN environment variable.');
+  if (!repo || !/^[\w.-]+\/[\w.-]+$/.test(repo)) {
+    throw new UserError('--verify-approvals needs the repository: --repo owner/name, or GITHUB_REPOSITORY.');
+  }
+  if (!/^\d+$/.test(number)) {
+    throw new UserError('--verify-approvals needs a pull request: --pr <number>, or a pull_request event in GitHub Actions.');
+  }
+  return { token, repo, number, api: (env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/, '') };
+}
+
+async function githubList(pr, route) {
+  const items = [];
+  for (let page = 1; page <= 30; page++) {
+    const res = await fetch(`${pr.api}/repos/${pr.repo}/pulls/${pr.number}/${route}?per_page=100&page=${page}`, {
+      headers: { Authorization: `Bearer ${pr.token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'discovery-to-spec' },
+    });
+    if (!res.ok) throw new Error(`GitHub answered ${res.status} for the pull request's ${route}`);
+    const batch = await res.json();
+    items.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return items;
+}
+
+/**
+ * Every approval line must belong to someone whose latest review of the pull
+ * request is an approval. Without an id, only explorations whose decision.md
+ * the pull request changes are verified.
+ */
+async function verifyApprovals(ctx, results, pr, { explicit, strict }) {
+  if (typeof fetch !== 'function') throw new Error('this Node.js has no fetch. Use Node.js 18 or later.');
+  const decide = lib.stageIndex('decide');
+  const candidates = results.filter((r) => lib.stageIndex(r.exp.stage) >= decide);
+  if (!candidates.length) return;
+  const decisionPath = (r) => path.relative(ctx.root, path.join(r.exp.dir, 'decision.md')).split(path.sep).join('/');
+  let targets = candidates;
+  if (!explicit) {
+    const changed = (await githubList(pr, 'files')).map((f) => f.filename);
+    targets = candidates.filter((r) => changed.some((f) => f === decisionPath(r) || f.endsWith(`/${decisionPath(r)}`)));
+    if (!targets.length) return;
+  }
+  const latest = new Map();
+  for (const r of await githubList(pr, 'reviews')) {
+    const login = r.user && r.user.login ? r.user.login.toLowerCase() : '';
+    if (login && ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(r.state)) latest.set(login, r.state);
+  }
+  const t = lib.approvalText(ctx.lang);
+  for (const r of targets) {
+    const decision = path.join(r.exp.dir, 'decision.md');
+    const rel = decisionPath(r);
+    const inProgress = r.exp.stage === 'decide' && !strict;
+    const add = (message) => (inProgress ? r.warnings : r.errors).push(`${rel}: ${message}${inProgress ? ' (in progress)' : ''}`);
+    r.verified = 0;
+    for (const a of lib.parseApprovalLines(lib.sectionContent(decision, KEY_SECTIONS[ctx.lang].approvedBy))) {
+      if (!a.ok) continue; // the format check reports it
+      if (!a.handle) add(t.handle(a.name));
+      else if (latest.get(a.handle.slice(1).toLowerCase()) !== 'APPROVED') add(t.notApproved(a.handle));
+      else r.verified++;
+    }
+  }
 }
 
 // ---------- next ----------
@@ -269,7 +385,9 @@ function next(positional, flags) {
   if (target.id === 'handoff') writeHandoff(ctx, exp, flags);
   else if (!lib.exists(file)) lib.writeText(file, lib.render(lib.getTemplate(ctx, target.template), vars));
 
-  lib.writeText(exp.briefPath, lib.setFrontMatterField(lib.readText(exp.briefPath), 'stage', target.id));
+  let brief = lib.setFrontMatterField(lib.readText(exp.briefPath), 'stage', target.id);
+  if (STAGES[i].id === 'decide') brief = lib.setFrontMatterField(brief, 'decided', lib.today());
+  lib.writeText(exp.briefPath, brief);
   ok(`${exp.id}: ${STAGES[i].id} → ${target.id}`);
   log(`  ${path.relative(ctx.root, file)}`);
   if (target.id === 'handoff') log(`\nReady for development. A coding agent can start with /d2s-handoff ${exp.id}.`);
@@ -285,7 +403,11 @@ function appendDecision(ctx, exp) {
   const keys = KEY_SECTIONS[ctx.lang];
   const decision = path.join(exp.dir, 'decision.md');
   const chosen = lib.firstParagraph(lib.sectionContent(decision, keys.chosen).replace(/https?:\/\/\S+/g, ''), 120);
-  const approvedBy = lib.firstParagraph(lib.sectionContent(decision, keys.approvedBy), 80);
+  const approvalSection = lib.sectionContent(decision, keys.approvedBy);
+  const approvers = lib.parseApprovalLines(approvalSection);
+  const approvedBy = approvers.length && approvers.every((a) => a.ok)
+    ? approvers.map((a) => `${a.name} (${a.role})`).join(', ')
+    : lib.firstParagraph(approvalSection, 80);
   const logFile = path.join(ctx.designDir, 'decisions.md');
   const link = path.relative(path.dirname(logFile), decision).split(path.sep).join('/');
   const row = `| ${lib.today()} | [${escapeCell(exp.title)}](${link}) | ${escapeCell(chosen)} | ${escapeCell(approvedBy)} |`;
@@ -392,7 +514,8 @@ Usage: d2s <command> [options]
       --cli "<command>"   How docs and skills call this tool (default: "npx d2s" when
                           installed in the project, otherwise ${REMOTE_CLI})
       --ci                Add a GitHub Actions check for pull requests
-      --force             Refresh agent files and config in an initialized repo
+      --force             Refresh agent files and config in an initialized repo,
+                          keeping its language, folder, command and approval rules
   new "<title>"         Start an exploration (stage 1: frame)
       --slug <name>       Folder name (latin letters)
       --owner <name>      Who leads it
@@ -400,13 +523,19 @@ Usage: d2s <command> [options]
       --all               Include archived explorations
   check [id]            Validate documents (exit code 1 on errors, for CI)
       --strict            Treat the current stage's gaps as errors too
+      --verify-approvals  With approvals.verify "github-pr": check that everyone in
+                          "Approved by" approved the pull request (needs GITHUB_TOKEN)
+      --pr <n>, --repo <owner/name>   The pull request, outside GitHub Actions
   next <id>             Pass the gate: validate the current stage and open the next
   handoff <id>          Regenerate handoff.md (and the OpenSpec draft, if openspec/ exists)
       --openspec          Write the OpenSpec draft even without an openspec/ folder
   archive <id>          Move a built exploration to explorations/archive
 
 Stages: frame → research → options → decide → spec → handoff
-An id can be "003-checkout", "3" or "checkout".`;
+An id can be "003-checkout", "3" or "checkout".
+
+"Approved by" in decision.md takes one line per person: name, role, date, and
+optionally a GitHub handle. Required roles are set in .d2s.json (approvals.roles).`;
 
 // ---------- main ----------
 
