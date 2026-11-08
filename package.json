@@ -1,0 +1,45 @@
+{
+  "name": "discovery-to-spec",
+  "version": "0.1.0",
+  "description": "A lightweight, repo-native workflow for design and product teams: frame → research → options → decide → spec → handoff. Markdown docs, a human decision gate, and agent skills for Claude Code and Cursor.",
+  "keywords": [
+    "design",
+    "product",
+    "discovery",
+    "spec",
+    "figma",
+    "openspec",
+    "claude-code",
+    "cursor",
+    "design-ops"
+  ],
+  "homepage": "https://github.com/eranlipi/discovery-to-spec#readme",
+  "bugs": {
+    "url": "https://github.com/eranlipi/discovery-to-spec/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eranlipi/discovery-to-spec.git"
+  },
+  "license": "MIT",
+  "author": "Eran Lipshtain",
+  "bin": {
+    "d2s": "bin/d2s.js",
+    "discovery-to-spec": "bin/d2s.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "integrations",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

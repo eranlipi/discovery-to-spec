@@ -1,0 +1,44 @@
+# How design and product work here
+
+Every feature or problem goes through six stages. Each stage leaves one short document, and only a direction approved at the decision gate moves on to development.
+
+| Stage | Document | What it holds | Led by |
+| --- | --- | --- | --- |
+| 1. Frame | `brief.md` | The problem, who it matters to, desired outcome, appetite and no-gos | Product |
+| 2. Research | `insights.md` | User insights with evidence and confidence | Design and product |
+| 3. Options | `options.md` | 2 to 4 directions with Figma links, pros and cons | Design |
+| 4. Decision gate | `decision.md` | What was chosen, what was rejected, why, and who approved | Product, design and engineering |
+| 5. Spec | `spec.md` | Screens, states, edge cases and acceptance criteria | Design |
+| 6. Handoff | `handoff.md` | Generated: summary, links and criteria for development | Engineering |
+
+## Where things live
+
+- `explorations/` — one folder per feature, holding the documents of every stage.
+- `decisions.md` — the log of every decision made.
+- `context.md` — standing product context: the product, users, design principles.
+- `templates/` — the templates. Adapt them to your team.
+
+## No terminal needed
+
+You don't need a terminal or Git to take part.
+
+- **Edit on GitHub:** open the file on github.com, click the pencil icon, write and commit.
+- **Write elsewhere:** write in Figma or a regular doc, and someone from engineering copies it in.
+- **The `<!-- -->` notes** are guidance. You can leave them; they don't count as content.
+- **Keep the `##` headings as they are** — the automatic check looks for them.
+
+## For whoever runs the tool
+
+```
+npx d2s new "Short name of the problem"   # start an exploration
+npx d2s status                            # where each exploration stands
+npx d2s next <id>                         # pass the gate to the next stage
+npx d2s check                             # validate all documents
+npx d2s archive <id>                      # archive once the feature is built
+```
+
+## With an AI agent (optional)
+
+In Claude Code or Cursor there is a command per stage: `/d2s-frame`, `/d2s-research`, `/d2s-options`, `/d2s-decide`, `/d2s-spec`, `/d2s-handoff`. The agent helps you write and summarize, but it never invents data and never approves decisions.
+
+Only use AI tools your organization has approved. Don't paste internal information into free public AI tools.

@@ -1,0 +1,18 @@
+# Checks design explorations on every pull request that touches them.
+# Stages that were already passed must be complete; the current stage may be in progress.
+name: d2s check
+
+on:
+  pull_request:
+    paths:
+      - "{{dir}}/**"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+{{ciInstall}}      - run: {{cli}} check
