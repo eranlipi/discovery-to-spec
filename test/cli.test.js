@@ -34,6 +34,14 @@ function fill(file, extra = {}) {
   fs.writeFileSync(file, text);
 }
 
+/** Replace the text under one `## ` heading; the rest of the document stays. */
+function setSection(file, heading, text) {
+  const doc = fs.readFileSync(file, 'utf8');
+  const re = new RegExp(`(^## ${heading}\\n)[\\s\\S]*?(?=^## |(?![\\s\\S]))`, 'm');
+  assert.match(doc, re, `${heading} is in ${file}`);
+  fs.writeFileSync(file, doc.replace(re, (_, h) => `${h}${text}\n\n`));
+}
+
 const exp = (repo, id, file) => path.join(repo, 'design', 'explorations', id, file);
 const read = (...p) => fs.readFileSync(path.join(...p), 'utf8');
 
@@ -54,7 +62,13 @@ test('init creates the design folder, skills, AGENTS.md and config', () => {
     assert.ok(fs.existsSync(path.join(repo, f)), `${f} should exist`);
   }
   const config = JSON.parse(read(repo, '.d2s.json'));
-  assert.deepEqual(config, { version: 1, lang: 'en', dir: 'design', cli: 'npx github:eranlipi/discovery-to-spec' });
+  assert.deepEqual(config, {
+    version: 1,
+    lang: 'en',
+    dir: 'design',
+    cli: 'npx github:eranlipi/discovery-to-spec',
+    approvals: { roles: ['product', 'design', 'engineering'], allowSamePerson: false, verify: 'none' },
+  });
   const skill = read(repo, '.claude/skills/d2s-frame/SKILL.md');
   assert.match(skill, /^---\nname: d2s-frame/);
   assert.doesNotMatch(skill, /\{\{\w+\}\}/, 'placeholders are rendered');
@@ -90,10 +104,14 @@ test('init refuses to run twice; --force refreshes without duplicating the AGENT
   fs.writeFileSync(path.join(repo, 'AGENTS.md'), '# Team rules\n\nUse tabs.\n');
   assert.equal(run(repo, 'init').code, 0);
   assert.equal(run(repo, 'init').code, 1);
+  const cfg = path.join(repo, '.d2s.json');
+  const custom = { roles: ['product', 'engineering'], allowSamePerson: true, verify: 'github-pr' };
+  fs.writeFileSync(cfg, JSON.stringify({ ...JSON.parse(read(cfg)), approvals: custom }));
   assert.equal(run(repo, 'init', '--force').code, 0);
   const agents = read(repo, 'AGENTS.md');
   assert.match(agents, /Use tabs\./, 'existing content is kept');
   assert.equal(agents.match(/<!-- d2s:start -->/g).length, 1);
+  assert.deepEqual(JSON.parse(read(cfg)).approvals, custom, '--force keeps the approval rules');
 });
 
 test('init options are validated', () => {
@@ -158,7 +176,7 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   });
   assert.equal(run(repo, 'next', id).code, 0);
 
-  // The decision gate needs "Approved by".
+  // The decision gate needs real approvals: one line per person, every role, no placeholders.
   fill(exp(repo, id, 'decision.md'), {
     'Chosen direction': 'One-page checkout. https://www.figma.com/design/abc/Checkout?node-id=1-2',
     'Approved by': '',
@@ -167,10 +185,33 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   assert.equal(r.code, 1);
   assert.match(r.out, /section "Approved by" is empty/);
   const decision = exp(repo, id, 'decision.md');
-  fs.writeFileSync(decision, read(decision).replace('## Approved by\n', '## Approved by\nDana (product), Yossi (design), Ron (engineering)\n'));
-  assert.equal(run(repo, 'next', id).code, 0);
+  const approve = (text) => {
+    setSection(decision, 'Approved by', text);
+    return run(repo, 'next', id);
+  };
+  r = approve('TBD');
+  assert.equal(r.code, 1, 'a placeholder is not an approval');
+  assert.match(r.out, /"TBD" is not an approval/);
+  r = approve('Dana (product), Yossi (design), Ron (engineering)');
+  assert.equal(r.code, 1, 'free text is not one line per person');
+  assert.match(r.out, /"Approved by" needs one line per person: name, role, date/);
+  r = approve('- Dana Levi, product, 2026-11-20\n- Claude, design, 2026-11-20');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /Only people approve\. Remove "Claude"/);
+  r = approve('- Dana Levi, product, 2026-11-20\n- Yossi Bar, design, 2026-11-20');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /Missing approval from: engineering/);
+  r = approve('- Dana Levi, product, 2026-11-20\n- Dana Levi, design, 2026-11-20\n- Ron Tal, engineering, 2026-11-21');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /Dana Levi is listed for two roles/);
+  r = approve('- Dana Levi, product, 2026-11-20, @danalevi\n- Yossi Bar, design lead, 2026-11-20\n- Ron Tal, engineering, 2026-11-21');
+  assert.equal(r.code, 0, r.out);
+  assert.match(read(exp(repo, id, 'brief.md')), /^decided: \d{4}-\d{2}-\d{2}$/m, 'the decision date is recorded');
   const log = read(repo, 'design', 'decisions.md');
-  assert.match(log, /\| \[Mobile checkout drop-off\]\(explorations\/001-checkout\/decision\.md\) \| One-page checkout\. \| Dana \(product\)/);
+  assert.match(
+    log,
+    /\| \[Mobile checkout drop-off\]\(explorations\/001-checkout\/decision\.md\) \| One-page checkout\. \| Dana Levi \(product\), Yossi Bar \(design lead\), Ron Tal \(engineering\) \|/,
+  );
   assert.doesNotMatch(log, /figma\.com/, 'links are kept out of the log');
 
   fill(exp(repo, id, 'spec.md'), { 'Acceptance criteria': 'Given a full cart, When the user taps "Pay", Then one page opens.' });
@@ -219,9 +260,14 @@ test('Hebrew locale: right-to-left templates go through the same gate', () => {
   const blocked = run(repo, 'next', id);
   assert.equal(blocked.code, 1);
   assert.match(blocked.out, /מי אישר/);
-  fill(exp(repo, id, 'decision.md'), { 'הכיוון שנבחר': 'תשלום בעמוד אחד.', 'מי אישר': 'דנה (מוצר)' });
+  const decision = exp(repo, id, 'decision.md');
+  setSection(decision, 'מי אישר', 'טרם נקבע');
+  assert.match(run(repo, 'next', id).out, /"טרם נקבע" הוא לא אישור/, 'Hebrew placeholders, Hebrew messages');
+  setSection(decision, 'מי אישר', '- דנה לוי, מוצר, 2026-11-20\n- יוסי בר, עיצוב, 2026-11-20');
+  assert.match(run(repo, 'next', id).out, /חסר אישור של: פיתוח/);
+  setSection(decision, 'מי אישר', '- דנה לוי, מוצר, 2026-11-20\n- יוסי בר, עיצוב, 2026-11-20\n- רון טל, פיתוח, 2026-11-21');
   assert.equal(run(repo, 'next', id).code, 0);
-  assert.match(read(repo, 'design', 'decisions.md'), /תשלום בעמוד אחד\. \| דנה \(מוצר\)/);
+  assert.match(read(repo, 'design', 'decisions.md'), /תשלום בעמוד אחד\. \| דנה לוי \(מוצר\), יוסי בר \(עיצוב\), רון טל \(פיתוח\) \|/);
 });
 
 test('check fails when a stage that was already passed is emptied (for CI)', () => {
@@ -277,4 +323,150 @@ test('lib: sections ignore comments and code fences; front matter updates in pla
   assert.equal(lib.slugify('Checkout — Mobile Drop-off!'), 'checkout-mobile-drop-off');
   assert.equal(lib.slugify('נטישה'), '');
   assert.deepEqual(lib.figmaLinks('see https://figma.com/file/x) and <!-- https://figma.com/hidden -->'), ['https://figma.com/file/x']);
+});
+
+test('lib: approval rules', () => {
+  const check = (content, settings = {}) => lib.checkApprovals(content, { lang: 'en', heading: 'Approved by', ...settings });
+  const ok3 = '- Dana Levi, product, 2026-11-20\n- Yossi Bar, design, 2026-11-20\n- Ron Tal, engineering, 2026-11-21';
+  assert.deepEqual(check(ok3), []);
+  assert.deepEqual(check('1. Dana Levi, PM, 2026-11-20\n2. Yossi Bar, UX, 2026-11-20\n3. Ron Tal, Engineering lead, 2026-11-21'), [], 'aliases and numbered lists');
+  assert.deepEqual(check('- Claude Dupont, product, 2026-11-20\n- Yossi Bar, design, 2026-11-20\n- Ron Tal, engineering, 2026-11-21'), [], 'a person named Claude is a person');
+
+  for (const placeholder of ['TBD', 'N/A', '?', 'pending', '- Dana Levi, product, TODO']) {
+    assert.match(check(placeholder)[0], /is not an approval/, placeholder);
+  }
+  assert.match(check('- Dana Levi, product, 2026-02-30')[0], /needs one line per person/, 'a date that does not exist');
+  assert.match(check('- Dana Levi, product')[0], /needs one line per person/);
+  assert.match(check('- Dana Levi, product, 2026-11-20, danalevi')[0], /needs one line per person/, 'a handle starts with @');
+  assert.match(check('- Copilot, engineering, 2026-11-20')[0], /Only people approve\. Remove "Copilot"/);
+  assert.match(check('- Ron Tal, engineering, 2026-11-20, @claude[bot]')[0], /Remove "@claude\[bot\]"/);
+  assert.match(check('Approved by Claude')[0], /Remove "Claude"/);
+
+  const same = '- Dana Levi, product, 2026-11-20\n- dana levi, design, 2026-11-20\n- Ron Tal, engineering, 2026-11-21';
+  assert.deepEqual(check(same), ['Dana Levi is listed for two roles']);
+  assert.deepEqual(check(same, { allowSamePerson: true }), [], 'small teams can allow it');
+  assert.deepEqual(check('- Dana Levi, product, 2026-11-20', { roles: ['product'] }), [], 'roles come from the config');
+  assert.deepEqual(check('- Dana Levi, product, 2026-11-20', { roles: ['product', 'legal'] }), ['Missing approval from: legal']);
+  assert.match(check(ok3, { verify: 'github-pr' })[0], /Dana Levi needs a GitHub handle/);
+
+  const he = (content) => lib.checkApprovals(content, { lang: 'he', heading: 'מי אישר' });
+  assert.deepEqual(he('- דנה לוי, מוצר, 2026-11-20\n- יוסי בר, עיצוב, 2026-11-20\n- רון טל, פיתוח, 2026-11-21'), []);
+  assert.deepEqual(he('- דנה לוי, מוצר, 2026-11-20'), ['חסר אישור של: עיצוב, פיתוח']);
+  assert.match(he('ממתין')[0], /"ממתין" הוא לא אישור/);
+  assert.match(he('- סוכן AI, פיתוח, 2026-11-20')[0], /רק אנשים מאשרים/);
+
+  assert.equal(lib.formatApprovalLine({ name: 'Dana, Levi', role: 'design', date: '2026-11-20', handle: '' }), '- Dana  Levi, design, 2026-11-20');
+});
+
+test('decisions approved before 0.2.0 only warn, so CI does not break on upgrade', () => {
+  const repo = tmpRepo();
+  run(repo, 'init');
+  run(repo, 'new', 'Old decision');
+  const id = '001-old-decision';
+  for (const f of ['brief.md', 'insights.md', 'options.md', 'decision.md', 'spec.md']) {
+    const vars = { id, title: 'Old decision', date: '2026-01-01', owner: '' };
+    if (f !== 'brief.md') fs.writeFileSync(exp(repo, id, f), lib.render(lib.packagedTemplate('en', f.replace('.md', '')), vars));
+    fill(exp(repo, id, f), { 'Approved by': 'Dana (product), Yossi (design), Ron (engineering)' });
+  }
+  const brief = exp(repo, id, 'brief.md');
+  fs.writeFileSync(brief, lib.setFrontMatterField(read(brief), 'stage', 'spec'));
+  let r = run(repo, 'check');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /warn .*needs one line per person.*approved before d2s 0\.2\.0/);
+
+  fs.writeFileSync(brief, lib.setFrontMatterField(read(brief), 'decided', '2026-11-20'));
+  r = run(repo, 'check');
+  assert.equal(r.code, 1, 'a decision that passed the new gate is held to it');
+  assert.match(r.out, /error .*needs one line per person/);
+});
+
+test('check --verify-approvals asks GitHub whether each approver approved the pull request', async () => {
+  const http = require('node:http');
+  const { execFile } = require('node:child_process');
+  const repo = tmpRepo();
+  run(repo, 'init');
+  const cfg = path.join(repo, '.d2s.json');
+  fs.writeFileSync(cfg, JSON.stringify({ ...JSON.parse(read(cfg)), approvals: { roles: ['product', 'design', 'engineering'], verify: 'github-pr' } }));
+  run(repo, 'new', 'Verified');
+  const id = '001-verified';
+  for (const f of ['brief.md', 'insights.md', 'options.md']) {
+    fill(exp(repo, id, f));
+    assert.equal(run(repo, 'next', id).code, 0);
+  }
+  fill(exp(repo, id, 'decision.md'), { 'Approved by': '- Dana Levi, product, 2026-11-20\n- Yossi Bar, design, 2026-11-20\n- Ron Tal, engineering, 2026-11-21' });
+  let r = run(repo, 'next', id);
+  assert.equal(r.code, 1, 'with github-pr, every line needs a handle');
+  assert.match(r.out, /Dana Levi needs a GitHub handle/);
+  setSection(exp(repo, id, 'decision.md'), 'Approved by', '- Dana Levi, product, 2026-11-20, @danalevi\n- Yossi Bar, design, 2026-11-20, @YossiBar\n- Ron Tal, engineering, 2026-11-21, @rontal');
+  assert.equal(run(repo, 'next', id).code, 0);
+
+  const state = { files: [`design/explorations/${id}/decision.md`], reviews: [], requests: [] };
+  const server = http.createServer((req, res) => {
+    state.requests.push(req.url);
+    assert.equal(req.headers.authorization, 'Bearer test-token');
+    const route = /\/repos\/acme\/app\/pulls\/7\/(files|reviews)\?/.exec(req.url);
+    res.setHeader('content-type', 'application/json');
+    if (!route) {
+      res.statusCode = 404;
+      return res.end('{}');
+    }
+    res.end(JSON.stringify(route[1] === 'files' ? state.files.map((filename) => ({ filename })) : state.reviews));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const env = {
+    ...process.env,
+    NO_COLOR: '1',
+    GITHUB_TOKEN: 'test-token',
+    GITHUB_REPOSITORY: 'acme/app',
+    GITHUB_API_URL: `http://127.0.0.1:${server.address().port}`,
+  };
+  const verify = (extraEnv = {}, ...args) =>
+    new Promise((resolve) => {
+      execFile(process.execPath, [BIN, 'check', '--verify-approvals', ...args], { cwd: repo, env: { ...env, ...extraEnv } }, (err, stdout, stderr) => {
+        resolve({ code: err ? err.code : 0, out: stdout + stderr });
+      });
+    });
+  const review = (login, s) => ({ user: { login }, state: s });
+
+  try {
+    state.reviews = [review('danalevi', 'APPROVED'), review('yossibar', 'APPROVED'), review('yossibar', 'CHANGES_REQUESTED'), review('rontal', 'COMMENTED')];
+    r = await verify({}, '--pr', '7');
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /@YossiBar has not approved this pull request/);
+    assert.match(r.out, /@rontal has not approved this pull request/);
+    assert.doesNotMatch(r.out, /@danalevi has not/);
+
+    state.reviews.push(review('YossiBar', 'APPROVED'), review('rontal', 'APPROVED'), review('rontal', 'COMMENTED'));
+    const event = path.join(repo, 'event.json');
+    fs.writeFileSync(event, JSON.stringify({ pull_request: { number: 7 } }));
+    r = await verify({ GITHUB_EVENT_PATH: event });
+    assert.equal(r.code, 0, r.out);
+    assert.match(r.out, /3 approval\(s\) verified on pull request #7/);
+
+    state.files = ['README.md'];
+    state.requests = [];
+    r = await verify({}, '--pr', '7');
+    assert.equal(r.code, 0, r.out);
+    assert.ok(state.requests.every((u) => u.includes('/files?')), 'decisions this pull request does not touch are not verified');
+
+    r = await verify({ GITHUB_TOKEN: '', GH_TOKEN: '' }, '--pr', '7');
+    assert.equal(r.code, 1);
+    assert.match(r.out, /needs a GITHUB_TOKEN/);
+
+    fs.writeFileSync(cfg, JSON.stringify({ ...JSON.parse(read(cfg)), approvals: { verify: 'none' } }));
+    state.requests = [];
+    r = await verify({}, '--pr', '7');
+    assert.equal(r.code, 0, r.out);
+    assert.match(r.out, /verification is off/);
+    assert.equal(state.requests.length, 0, 'no network unless the team turns it on');
+  } finally {
+    server.close();
+  }
+
+  const ci = path.join(repo, 'ci');
+  fs.mkdirSync(ci);
+  assert.equal(run(ci, 'init', '--ci').code, 0);
+  const workflow = read(ci, '.github/workflows/d2s-check.yml');
+  assert.match(workflow, /check --verify-approvals\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(workflow, /pull_request_review:/);
 });

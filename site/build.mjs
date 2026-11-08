@@ -47,11 +47,13 @@ const sandbox = [
   '(function () {',
   `var BUNDLE = { pkg: ${jsonSafe({ name: pkg.name, version: pkg.version })}, files: ${jsonSafe(packaged)}, modules: {\n${modules}\n} };`,
   scriptSafe(read(SITE, 'src', 'runtime.js'), 'runtime.js'),
-  'window.D2S = createD2sSandbox(BUNDLE);',
+  '// Each view gets its own in-memory project.',
+  'window.D2S_NEW = function () { return createD2sSandbox(BUNDLE); };',
+  'window.D2S = window.D2S_NEW();',
   '})();',
 ].join('\n');
 
-// ---------- sample text for the sandbox's "fill" helper ----------
+// ---------- sample text for "fill", "approve" and "Use example text" ----------
 
 function sectionsOf(text) {
   const body = text.replace(/^---\n[\s\S]*?\n---\n/, '');
@@ -85,6 +87,8 @@ for (const [lang, dir] of Object.entries(sampleDirs)) {
 // ---------- page ----------
 
 const i18n = read(SITE, 'src', 'i18n.js');
+const form = read(SITE, 'src', 'stage-form.js');
+const designer = read(SITE, 'src', 'designer.js');
 const app = read(SITE, 'src', 'app.js');
 const data = `window.D2S_SAMPLES = ${jsonSafe(samples)};\nwindow.D2S_VERSION = ${jsonSafe(pkg.version)};`;
 
@@ -94,6 +98,8 @@ const slots = {
   '/*@sandbox*/': sandbox,
   '/*@data*/': data,
   '/*@i18n*/': scriptSafe(i18n, 'i18n.js'),
+  '/*@form*/': scriptSafe(form, 'stage-form.js'),
+  '/*@designer*/': scriptSafe(designer, 'designer.js'),
   '/*@app*/': scriptSafe(app, 'app.js'),
 };
 for (const [slot, value] of Object.entries(slots)) {

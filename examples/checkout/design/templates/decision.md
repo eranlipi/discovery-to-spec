@@ -14,4 +14,4 @@
 ## Risks and what to watch after launch (optional)
 
 ## Approved by
-<!-- Names and roles: at least product, design and engineering. Only people approve, never an AI agent. -->
+<!-- One line per person: name, role, date, and optionally a GitHub handle. E.g. "- Dana Levi, design, 2026-11-20, @danalevi". Every role in .d2s.json must approve (product, design and engineering by default). Only people approve, never an AI agent, and "TBD" is not an approval. -->

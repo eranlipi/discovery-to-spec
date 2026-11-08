@@ -222,9 +222,10 @@ function createD2sSandbox(bundle) {
     fs: fsShim,
     path: pathShim,
     lib: lib,
-    /** Run `d2s <argv>`. Returns the exit code and the printed lines. */
-    run: function (argv) {
+    /** Run `d2s <argv>`. Returns the exit code and the printed lines. `opts.columns` is the terminal width. */
+    run: function (argv, opts) {
       out = [];
+      processShim.stdout.columns = opts && opts.columns > 0 ? opts.columns : undefined;
       var code;
       try {
         code = cli.main(argv);
