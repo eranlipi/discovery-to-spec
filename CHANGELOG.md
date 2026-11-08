@@ -25,7 +25,7 @@ A real approval gate, and a way to run an exploration without a terminal.
 - Existing explorations keep working. Decisions that passed the gate before 0.2.0 show their free-text approvals as warnings in `d2s check`, not errors.
 - Run `d2s init --force` (add `--ci` if you use the CI check) to refresh the agent skills and the workflow and add the `approvals` block to `.d2s.json`. It now keeps your language, folder and command; before 0.2.0 it reset them unless you passed the flags again.
 - The next decision that passes the gate needs one line per approver, for example `- Dana Levi, design, 2026-11-20`.
-- Release notes are now published by `.github/workflows/release.yml` from this file.
+- Releases are now published by `.github/workflows/release.yml`: merging a new `version` in `package.json` to `master` tags it and publishes its section of this file as the release notes.
 
 ## 0.1.0 (2026-11-08)
 

@@ -47,6 +47,11 @@ node /path/to/discovery-to-spec/bin/d2s.js new "Something to explore"
 2. Add the language to `LANGS`, its key headings to `KEY_SECTIONS`, its role names to `ROLES` and its approval messages to `APPROVAL_TEXT` in `src/lib.js`.
 3. Add a test that runs a full exploration in that language (see the Hebrew test in `test/cli.test.js`).
 
+## Releasing
+
+1. Bump `version` in `package.json` and add a `## <version> (<date>)` section at the top of `CHANGELOG.md`.
+2. Merge to `master`. `.github/workflows/release.yml` runs the tests, creates the `v<version>` tag and publishes the release, with that CHANGELOG section as its notes. Pushes that don't change the version do nothing.
+
 ## Pull requests
 
 - Keep changes focused, and add or update tests.
