@@ -308,6 +308,7 @@
   function connect(settings) {
     S.screen = 'loading';
     S.error = '';
+    S.attempt = settings; // so a failed attempt keeps what was typed
     render();
     var client;
     try {
@@ -326,7 +327,7 @@
           return client.info()
             .then(function (r) { return client.head(r.default_branch); })
             .then(function (from) {
-              branchNote = t('branchCreated', { branch: branch });
+              branchNote = branch; // worded below, once the project's language is known
               return client.createBranch(branch, from);
             });
         });
@@ -357,10 +358,11 @@
         S.client = client;
         S.base = { head: snap.head, files: snap.files };
         S.settings = { repo: settings.repo, branch: branch, token: settings.token, api: settings.api || '' };
+        S.attempt = null;
         S.lang = ctx().lang === 'he' ? 'he' : 'en';
         applyDrafts();
         S.screen = S.expId && exploration() ? 'exp' : 'home';
-        S.notice = branchNote ? { kind: 'ok', text: branchNote } : S.notice;
+        S.notice = branchNote ? { kind: 'ok', text: t('branchCreated', { branch: branchNote }) } : S.notice;
         return call('store', { key: 'd2s-settings', value: S.settings });
       })
       .then(render, fail);
@@ -613,7 +615,7 @@
   }
 
   function connectScreen() {
-    var s = S.settings || {};
+    var s = S.attempt || S.settings || {};
     var repo = h('input', { type: 'text', value: s.repo || '', placeholder: 'acme/checkout-app', autocomplete: 'off', spellcheck: 'false', dir: 'ltr' });
     var branch = h('input', { type: 'text', value: s.branch || '', placeholder: 'main', autocomplete: 'off', spellcheck: 'false', dir: 'ltr' });
     var token = h('input', { type: 'password', value: s.token || '', placeholder: 'github_pat_…', autocomplete: 'off', dir: 'ltr' });
@@ -634,7 +636,7 @@
         type: 'button',
         onclick: function () { call('open-url', { url: 'https://github.com/settings/personal-access-tokens/new' }); },
       }, t('createToken') + ' ↗'),
-      h('details', h('summary', t('advanced')), field(t('api'), api, t('apiHint'))),
+      h('details', { open: !!s.api }, h('summary', t('advanced')), field(t('api'), api, t('apiHint'))),
       h('div.actions', h('button.primary', { type: 'submit' }, t('connect')))
     );
   }

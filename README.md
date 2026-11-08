@@ -130,7 +130,7 @@ The rules live in `.d2s.json`. Teams of two or three set `allowSamePerson` to `t
 
 Every document is plain Markdown. Designers and product managers can edit files on github.com (the pencil icon), or write in Figma or a doc and have someone paste it in. The `<!-- -->` notes in the templates are guidance and don't count as content. The one rule: keep the `##` headings, because the check looks for them.
 
-The [sandbox on the website](https://discoverytospec.com/#sandbox) opens on a **Designer view**: each stage is a form with one field per `##` heading, the template's note as helper text, and a **Next stage** button that runs the real gate and shows each gap next to its field. It writes the same Markdown the CLI does; **Show the file** reveals it. A Figma plugin that uses the same form is planned.
+The [sandbox on the website](https://discoverytospec.com/#sandbox) opens on a **Designer view**: each stage is a form with one field per `##` heading, the template's note as helper text, and a **Next stage** button that runs the real gate and shows each gap next to its field. It writes the same Markdown the CLI does; **Show the file** reveals it. The [Figma plugin](figma-plugin/README.md) brings the same form into Figma: attach selected frames, pass the gate and save to GitHub without leaving the canvas.
 
 ## AI agents
 
@@ -170,7 +170,7 @@ Templates ship in English (default) and Hebrew (`--lang he`, right to left). The
 ## Roadmap
 
 - A GitHub Action, so explorations can be started and advanced from the Actions tab with no terminal at all.
-- A Figma plugin: start, fill and advance explorations and request approvals from inside Figma, saving to the same files in GitHub. It reuses the sandbox's stage form.
+- The Figma plugin's next steps: sign-in with a GitHub App, a pull request per exploration, and approvals as verified reviews.
 - GitHub issue forms for opening a brief without touching files.
 - Publishing to npm.
 - More languages.

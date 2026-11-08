@@ -42,9 +42,16 @@ jobs:
         run: npm test
       - if: steps.tag.outputs.skip != 'true'
         run: node .github/scripts/release-notes.mjs > notes.md
+      - name: Package the Figma plugin
+        if: steps.tag.outputs.skip != 'true'
+        run: |
+          npm run plugin
+          cd figma-plugin && zip -r "../d2s-figma-plugin-$TAG.zip" manifest.json dist README.md
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
       - name: Create the release
         if: steps.tag.outputs.skip != 'true'
-        run: gh release create "$TAG" --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"
+        run: gh release create "$TAG" "d2s-figma-plugin-$TAG.zip" --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           GH_TOKEN: ${{ github.token }}

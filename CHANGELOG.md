@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Figma plugin** (`figma-plugin/`): start, fill and advance explorations from a panel inside Figma. Attach selected frames with a "Show on canvas" button, pass the gate, and save to GitHub as one commit per save, with a keep-mine or take-theirs choice on conflicts and local drafts. It connects with a fine-grained GitHub token. See [figma-plugin/README.md](figma-plugin/README.md).
+- **A one-page summary for design and product** (`summary.md`), generated with the handoff. The sandbox's last stage shows it next to the handoff for developers.
+- Releases attach the plugin as a zip.
+
 ## 0.2.0 (2026-11-08)
 
 A real approval gate, and a way to run an exploration without a terminal.
