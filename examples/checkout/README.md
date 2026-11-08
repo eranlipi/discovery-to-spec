@@ -9,7 +9,8 @@ This folder shows one feature that went through all six stages, exactly as `d2s`
 3. [Options](design/explorations/001-checkout-mobile/options.md)
 4. [Decision](design/explorations/001-checkout-mobile/decision.md)
 5. [Spec](design/explorations/001-checkout-mobile/spec.md)
-6. [Handoff](design/explorations/001-checkout-mobile/handoff.md) (generated)
+6. [Handoff](design/explorations/001-checkout-mobile/handoff.md) (generated, for development)
+7. [Summary](design/explorations/001-checkout-mobile/summary.md) (generated, one page for design and product)
 
 The [decision log](design/decisions.md) filled itself in when the feature passed the decision gate. Notice that the handoff only carries the chosen direction's Figma links, not the rejected ones.
 

@@ -18,20 +18,40 @@ const STAGES = [
 ];
 const ARCHIVED = 'archived';
 
-// Headings the CLI reads to build the handoff. Must match the templates.
+// Headings the CLI reads to build the handoff and the summary. Must match the templates.
 const KEY_SECTIONS = {
   he: {
     problem: 'הבעיה',
+    who: 'למי זה חשוב',
+    outcome: 'מה רוצים שיקרה',
+    appetite: 'מסגרת זמן',
+    noGos: 'מה לא עושים',
     openQuestions: 'שאלות פתוחות',
+    insights: 'תובנות מרכזיות',
+    unclear: 'מה עדיין לא ברור',
     chosen: 'הכיוון שנבחר',
+    why: 'למה',
+    rejected: 'מה נדחה ולמה',
+    risks: 'סיכונים ומה בודקים אחרי ההשקה',
     approvedBy: 'מי אישר',
+    screens: 'מסכים וזרימה',
     criteria: 'קריטריוני קבלה',
   },
   en: {
     problem: 'Problem',
+    who: 'Who it matters to',
+    outcome: 'Desired outcome',
+    appetite: 'Appetite',
+    noGos: 'No-gos',
     openQuestions: 'Open questions',
+    insights: 'Key insights',
+    unclear: 'Still unclear',
     chosen: 'Chosen direction',
+    why: 'Why',
+    rejected: 'Rejected and why',
+    risks: 'Risks and what to watch after launch',
     approvedBy: 'Approved by',
+    screens: 'Screens and flow',
     criteria: 'Acceptance criteria',
   },
 };

@@ -19,6 +19,7 @@
   var gateShown = false; // after a blocked "Next stage", gaps update as you type
   var notice = null;
   var showFile = false;
+  var finalDoc = 'summary'; // at the last stage: summary.md (design and product) or handoff.md (developers)
   var form = null;
   var revalidate = null;
 
@@ -32,6 +33,7 @@
     notice: $('.dz-notice'),
     form: $('.dz-form'),
     preview: $('.dz-preview'),
+    docs: $('.dz-docs'),
     actions: $('.dz-actions'),
     next: $('.dz-next'),
     example: $('.dz-example'),
@@ -92,6 +94,7 @@
     view = null;
     gateShown = false;
     notice = null;
+    finalDoc = 'summary';
     render();
   }
 
@@ -252,6 +255,10 @@
     var shownIndex = view === null ? s.index : view;
     var stage = lib.STAGES[shownIndex];
     var path = docPath(s, stage);
+    var handoff = stage.id === 'handoff';
+    if (handoff && finalDoc === 'summary' && D2S.exists(path.replace(/handoff\.md$/, 'summary.md'))) {
+      path = path.replace(/handoff\.md$/, 'summary.md');
+    }
     var current = shownIndex === s.index;
 
     els.title.textContent = s.exp.title;
@@ -264,14 +271,17 @@
     drawRail(s);
     els.step.textContent = t('dzStageOf', { n: shownIndex + 1 }) + ' · ' + t('dzStages')[shownIndex];
 
-    var handoff = stage.id === 'handoff';
     els.form.hidden = handoff;
     els.preview.hidden = !handoff;
+    els.docs.hidden = !handoff;
+    Array.prototype.forEach.call(els.docs.querySelectorAll('[data-doc]'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-doc') === finalDoc));
+    });
     els.actions.hidden = !current || handoff;
     form = null;
 
     if (handoff) {
-      els.intro.textContent = t('dzHandoffIntro');
+      els.intro.textContent = t(finalDoc === 'summary' ? 'dzSummaryIntro' : 'dzHandoffIntro');
       els.preview.innerHTML = Form.markdown(D2S.read(path));
       if (!notice) notice = { kind: 'info', text: t('dzRestartHint') };
     } else {
@@ -315,6 +325,12 @@
   // ---------- wiring ----------
 
   els.next.addEventListener('click', next);
+  Array.prototype.forEach.call(els.docs.querySelectorAll('[data-doc]'), function (b) {
+    b.addEventListener('click', function () {
+      finalDoc = b.getAttribute('data-doc');
+      render();
+    });
+  });
   els.example.addEventListener('click', useExample);
   els.reset.addEventListener('click', start);
   els.toggle.addEventListener('click', function () {

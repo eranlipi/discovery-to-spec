@@ -6,7 +6,7 @@ const lib = require('./lib.js');
 
 const { STAGES, KEY_SECTIONS, UserError } = lib;
 const VERSION = require('../package.json').version;
-const TEMPLATE_NAMES = ['brief', 'insights', 'options', 'decision', 'spec', 'handoff'];
+const TEMPLATE_NAMES = ['brief', 'insights', 'options', 'decision', 'spec', 'handoff', 'summary'];
 const AGENTS = ['claude', 'cursor', 'agents-md'];
 const REMOTE_CLI = 'npx github:eranlipi/discovery-to-spec';
 
@@ -390,7 +390,10 @@ function next(positional, flags) {
   lib.writeText(exp.briefPath, brief);
   ok(`${exp.id}: ${STAGES[i].id} → ${target.id}`);
   log(`  ${path.relative(ctx.root, file)}`);
-  if (target.id === 'handoff') log(`\nReady for development. A coding agent can start with /d2s-handoff ${exp.id}.`);
+  if (target.id === 'handoff') {
+    log(`  ${path.relative(ctx.root, path.join(exp.dir, 'summary.md'))} (one page for design and product)`);
+    log(`\nReady for development. A coding agent can start with /d2s-handoff ${exp.id}.`);
+  }
   else log(`\nNext: fill ${target.file} (or run /${target.skill} ${exp.id}), then: ${ctx.config.cli} next ${exp.id}`);
   return 0;
 }
@@ -438,10 +441,38 @@ function writeHandoff(ctx, exp, flags = {}) {
   };
   const file = path.join(exp.dir, 'handoff.md');
   lib.writeText(file, lib.render(lib.getTemplate(ctx, 'handoff'), vars));
+  writeSummary(ctx, exp, docs, vars);
 
   const openspecDir = path.join(ctx.root, 'openspec');
   if (flags.openspec || lib.exists(openspecDir)) writeOpenSpecProposal(ctx, exp, { chosen, links, force: !!flags.force });
   return file;
+}
+
+/** The one-page summary for design and product, written next to the handoff. */
+function writeSummary(ctx, exp, docs, handoffVars) {
+  const keys = KEY_SECTIONS[ctx.lang];
+  const none = '—';
+  const [brief, insights, , decision, spec] = docs;
+  const get = (file, key) => lib.sectionContent(file, keys[key]);
+  const questions = [get(brief, 'openQuestions'), get(insights, 'unclear')].filter(Boolean).join('\n\n');
+  const vars = {
+    ...handoffVars,
+    problem: get(brief, 'problem') || none,
+    who: get(brief, 'who') || none,
+    outcome: get(brief, 'outcome') || none,
+    appetite: get(brief, 'appetite') || none,
+    noGos: get(brief, 'noGos'),
+    insights: get(insights, 'insights') || none,
+    chosen: get(decision, 'chosen') || none,
+    why: get(decision, 'why'),
+    rejected: get(decision, 'rejected') || none,
+    risks: get(decision, 'risks') || none,
+    approvedBy: get(decision, 'approvedBy') || none,
+    screens: get(spec, 'screens') || none,
+    openQuestions: questions || none,
+  };
+  const text = lib.render(lib.getTemplate(ctx, 'summary'), vars).replace(/\n{3,}/g, '\n\n');
+  lib.writeText(path.join(exp.dir, 'summary.md'), text);
 }
 
 function writeOpenSpecProposal(ctx, exp, { chosen, links, force }) {
@@ -480,7 +511,7 @@ function handoff(positional, flags) {
     throw new UserError(`${exp.id} is at "${exp.stage}". Reach handoff with: ${ctx.config.cli} next ${exp.id}`);
   }
   const file = writeHandoff(ctx, exp, flags);
-  ok(`Regenerated ${path.relative(ctx.root, file)}`);
+  ok(`Regenerated ${path.relative(ctx.root, file)} and summary.md`);
   return 0;
 }
 
@@ -527,7 +558,8 @@ Usage: d2s <command> [options]
                           "Approved by" approved the pull request (needs GITHUB_TOKEN)
       --pr <n>, --repo <owner/name>   The pull request, outside GitHub Actions
   next <id>             Pass the gate: validate the current stage and open the next
-  handoff <id>          Regenerate handoff.md (and the OpenSpec draft, if openspec/ exists)
+  handoff <id>          Regenerate handoff.md and summary.md (and the OpenSpec draft,
+                        if openspec/ exists)
       --openspec          Write the OpenSpec draft even without an openspec/ folder
   archive <id>          Move a built exploration to explorations/archive
 

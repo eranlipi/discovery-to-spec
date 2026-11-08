@@ -9,7 +9,7 @@ Every feature or problem goes through six stages. Each stage leaves one short do
 | 3. Options | `options.md` | 2 to 4 directions with Figma links, pros and cons | Design |
 | 4. Decision gate | `decision.md` | What was chosen, what was rejected, why, and who approved | Product, design and engineering |
 | 5. Spec | `spec.md` | Screens, states, edge cases and acceptance criteria | Design |
-| 6. Handoff | `handoff.md` | Generated: summary, links and criteria for development | Engineering |
+| 6. Handoff | `handoff.md`, `summary.md` | Generated: links and criteria for development, and a one-page summary for design and product | Engineering, design and product |
 
 ## Where things live
 
