@@ -124,6 +124,7 @@
   }
 
   function showGaps() {
+    if (!gateShown) return; // a late check must not report on a stage that has already passed
     var s = state();
     var g = gaps(s);
     if (form) form.setIssues(g.byKey);
@@ -132,6 +133,7 @@
   }
 
   function next() {
+    clearTimeout(revalidate);
     var before = state();
     var r = D2S.run(['next', before.exp.id]);
     if (r.code !== 0) {
