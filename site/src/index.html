@@ -27,6 +27,7 @@
     </a>
     <div class="nav-links">
       <a href="#sandbox" data-i18n="nav.sandbox">Sandbox</a>
+      <a href="#assistant" data-i18n="nav.assistant">AI assistant</a>
       <a href="#workflow" data-i18n="nav.workflow">Workflow</a>
       <a href="https://github.com/eranlipi/discovery-to-spec#readme" data-i18n="nav.docs">Docs ↗</a>
       <a href="https://github.com/eranlipi/discovery-to-spec" data-i18n="nav.github">GitHub ↗</a>
@@ -141,7 +142,7 @@
           <p class="dz-intro"></p>
           <div class="dz-notice" tabindex="-1" role="status" hidden></div>
           <div class="dz-paste" hidden>
-            <label for="dz-paste-text" class="dz-paste-title" data-i18n="sandbox.pasteTitle">Paste the document Claude wrote for this stage</label>
+            <label for="dz-paste-text" class="dz-paste-title" data-i18n="sandbox.pasteTitle">Paste the document your AI assistant wrote for this stage</label>
             <p class="field-help" data-i18n="sandbox.pasteHint">Each “## heading” fills the field with the same name. Fields without a matching heading stay as they are.</p>
             <textarea id="dz-paste-text" rows="8" dir="auto"></textarea>
             <div class="dz-paste-actions">
@@ -158,7 +159,7 @@
           <div class="dz-actions">
             <button type="button" class="btn primary dz-next" data-i18n="sandbox.next">Next stage</button>
             <button type="button" class="btn dz-example" data-i18n="sandbox.example">Use example text</button>
-            <button type="button" class="btn dz-paste-toggle" data-i18n="sandbox.paste">Paste from Claude</button>
+            <button type="button" class="btn dz-paste-toggle" data-i18n="sandbox.paste">Paste from AI</button>
           </div>
         </div>
         <aside class="dz-file" hidden>
@@ -202,8 +203,69 @@
   </div>
 </section>
 
+<section id="assistant" class="wrap block" aria-labelledby="assistant-title">
+  <h2 id="assistant-title" class="sec"><span class="sec-num" dir="ltr">04</span><span data-i18n="assistant.title">An AI assistant for the thinking</span></h2>
+  <p class="intro" data-i18n="assistant.intro">Development got fast. The thinking before it is now the slow part. The d2s assistant works in the chat you already use, Claude, ChatGPT or Gemini, and gets you to “what should we build” faster, without skipping the thinking.</p>
+  <div class="grid3">
+    <div><h3 data-i18n="assistant.p1">Frames the problem</h3><p data-i18n="assistant.p1t">Asks the right questions, and pushes back when a request arrives as a solution.</p></div>
+    <div><h3 data-i18n="assistant.p2">Makes sense of research</h3><p data-i18n="assistant.p2t">Turns raw interview notes, tickets and data into insights with evidence and a confidence level. Quotes stay word for word, and names come out.</p></div>
+    <div><h3 data-i18n="assistant.p3">Lays out real directions</h3><p data-i18n="assistant.p3t">Two to four genuinely different directions, then the decision and the spec.</p></div>
+  </div>
+  <p class="note" data-i18n="assistant.rules">It never invents research and never approves for anyone. Each stage ends with a document that has your team’s headings, and <b>Paste from AI</b> in d2s fills the form from it.</p>
+
+  <div class="tabs assist-tabs" role="tablist" aria-label="Set up the assistant">
+    <button type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true" dir="ltr">Claude</button>
+    <button type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false" tabindex="-1" dir="ltr">ChatGPT</button>
+    <button type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false" tabindex="-1" dir="ltr">Gemini</button>
+  </div>
+  <div class="panel assist-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
+    <ol class="steps">
+      <li data-i18n="assistant.claude1">Download the skill: <a href="https://github.com/eranlipi/discovery-to-spec/releases/download/v{{version}}/d2s-discovery-skill-v{{version}}.zip" dir="ltr">d2s-discovery-skill-v{{version}}.zip</a>. Keep it zipped.</li>
+      <li data-i18n="assistant.claude2">In Claude, open <b dir="ltr">Customize → Skills</b>, choose <b dir="ltr">+ → Create skill → Upload a skill</b>, pick the zip and turn the skill on.</li>
+      <li data-i18n="assistant.claude3">Start a chat and talk as usual. Claude uses the skill when you frame a problem, paste research or explore directions.</li>
+    </ol>
+    <p class="note" data-i18n="assistant.claudeNote">Skills need code execution, which settings call “Create and edit files”, and a paid plan. Without skills, create a <b>Project</b> and paste the instructions into its instructions.</p>
+    <button type="button" class="btn copy-btn" data-copy-key="instructions" data-i18n="assistant.copy">Copy the instructions</button>
+  </div>
+  <div class="panel assist-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
+    <ol class="steps">
+      <li data-i18n="assistant.gpt1">Copy the instructions with the button below.</li>
+      <li data-i18n="assistant.gpt2">In ChatGPT, click <b dir="ltr">New project</b> in the sidebar and name it “d2s discovery”.</li>
+      <li data-i18n="assistant.gpt3">Open the project’s <b dir="ltr">•••</b> menu, choose <b dir="ltr">Project settings</b>, paste the instructions and save. Check that all of the text was saved.</li>
+      <li data-i18n="assistant.gpt4">Start every chat about the feature inside the project, and talk as usual.</li>
+    </ol>
+    <p class="note" data-i18n="assistant.gptNote">Projects work on every ChatGPT plan, Free included. Custom GPTs can no longer be created on personal accounts. On Business and Enterprise, you can create a <b>Skill</b> with the same instructions instead.</p>
+    <button type="button" class="btn copy-btn" data-copy-key="instructions" data-i18n="assistant.copy">Copy the instructions</button>
+  </div>
+  <div class="panel assist-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
+    <ol class="steps">
+      <li data-i18n="assistant.gem1">In Gemini, open <b dir="ltr">Skills</b> from the sidebar, then choose <b dir="ltr">Create → Create manually</b>.</li>
+      <li data-i18n="assistant.gem2">Name it <code dir="ltr">d2s-discovery</code>, and paste the description and the instructions with the buttons below. Click <b dir="ltr">Create</b>.</li>
+      <li data-i18n="assistant.gem3">In any chat, type <code dir="ltr">/</code> and choose the skill, then talk as usual.</li>
+    </ol>
+    <p class="note" data-i18n="assistant.gemNote">Gemini skills are free on personal Google accounts. Gems are being retired, so use a skill.</p>
+    <div class="copy-row">
+      <button type="button" class="btn copy-btn" data-copy-key="description" data-i18n="assistant.copyDescription">Copy the description</button>
+      <button type="button" class="btn copy-btn" data-copy-key="instructions" data-i18n="assistant.copy">Copy the instructions</button>
+    </div>
+  </div>
+
+  <p class="note" data-i18n="assistant.menus">These apps rename their menus from time to time. If a name here doesn’t match, look for it in the app’s settings or customize menu.</p>
+  <div class="assist-try">
+    <div>
+      <h3 data-i18n="assistant.tryTitle">Try it in two minutes</h3>
+      <p data-i18n="assistant.tryText">Copy our sample interview notes, paste them into the assistant and ask “What comes out of this?”. Then copy the document it writes. In the sandbox above, reach the research stage (Use example text, then Next stage) and choose <b>Paste from AI</b>.</p>
+    </div>
+    <button type="button" class="btn copy-btn" data-copy-key="notes" data-i18n="assistant.copyNotes">Copy sample notes</button>
+  </div>
+  <details class="assist-text">
+    <summary data-i18n="assistant.read">Read the instructions</summary>
+    <pre id="assist-instructions" dir="ltr"></pre>
+  </details>
+</section>
+
 <section id="stages" class="wrap block" aria-labelledby="stages-title">
-  <h2 id="stages-title" class="sec"><span class="sec-num" dir="ltr">04</span><span data-i18n="stages.title">Six docs, one gate</span></h2>
+  <h2 id="stages-title" class="sec"><span class="sec-num" dir="ltr">05</span><span data-i18n="stages.title">Six docs, one gate</span></h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th scope="col" data-i18n="stages.hStage">Stage</th><th scope="col" data-i18n="stages.hDoc">Document</th><th scope="col" data-i18n="stages.hHolds">What it holds</th><th scope="col" data-i18n="stages.hLed">Led by</th></tr></thead>
@@ -221,15 +283,15 @@
 </section>
 
 <section id="tools" class="wrap block" aria-labelledby="tools-title">
-  <h2 id="tools-title" class="sec"><span class="sec-num" dir="ltr">05</span><span data-i18n="tools.title">Compatibility</span></h2>
+  <h2 id="tools-title" class="sec"><span class="sec-num" dir="ltr">06</span><span data-i18n="tools.title">Compatibility</span></h2>
   <ul class="tools" dir="ltr">
-    <li>Figma</li><li>GitHub</li><li>Claude Code</li><li>Cursor</li><li>Codex</li><li>GitHub Copilot</li><li>OpenSpec</li>
+    <li>Figma</li><li>GitHub</li><li>Claude</li><li>ChatGPT</li><li>Gemini</li><li>Claude Code</li><li>Cursor</li><li>Codex</li><li>GitHub Copilot</li><li>OpenSpec</li>
   </ul>
-  <p class="note" data-i18n="tools.note">Claude Code and Cursor get a command per stage. Codex, Copilot and other agents read the shared rules from <code dir="ltr">AGENTS.md</code>. When the Figma MCP server is connected, agents read the linked frames.</p>
+  <p class="note" data-i18n="tools.note">Designers and product managers use the d2s assistant in Claude, ChatGPT or Gemini. Claude Code and Cursor get a command per stage. Codex, Copilot and other agents read the shared rules from <code dir="ltr">AGENTS.md</code>. When the Figma MCP server is connected, agents read the linked frames.</p>
 </section>
 
 <section id="principles" class="wrap block" aria-labelledby="principles-title">
-  <h2 id="principles-title" class="sec"><span class="sec-num" dir="ltr">06</span><span data-i18n="principles.title">Easy to say yes to</span></h2>
+  <h2 id="principles-title" class="sec"><span class="sec-num" dir="ltr">07</span><span data-i18n="principles.title">Easy to say yes to</span></h2>
   <div class="grid4">
     <div><h3 data-i18n="principles.p1">MIT, no paid tier</h3><p data-i18n="principles.p1t">Free to use, change and ship, for teams of any size.</p></div>
     <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 1,200 lines of plain Node.js. Your security team can read all of it.</p></div>
@@ -239,7 +301,7 @@
 </section>
 
 <section id="faq" class="wrap block" aria-labelledby="faq-title">
-  <h2 id="faq-title" class="sec"><span class="sec-num" dir="ltr">07</span><span data-i18n="faq.title">Questions</span></h2>
+  <h2 id="faq-title" class="sec"><span class="sec-num" dir="ltr">08</span><span data-i18n="faq.title">Questions</span></h2>
   <div class="faq">
     <details><summary data-i18n="faq.q1">Do designers need a terminal?</summary><p data-i18n="faq.a1">No. Try the Designer view above: every stage is a form with a Next stage button, and it writes the same Markdown files the CLI does. Today designers and product managers can also edit the files on github.com, or write in Figma or a doc and have someone paste it in. A Figma plugin is planned.</p></details>
     <details><summary data-i18n="faq.q2">Does it replace OpenSpec?</summary><p data-i18n="faq.a2">No, it comes before it. OpenSpec starts once you know the change you want. discovery-to-spec helps you get there, and drafts an OpenSpec proposal when you do.</p></details>

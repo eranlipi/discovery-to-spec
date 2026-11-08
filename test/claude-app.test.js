@@ -40,9 +40,11 @@ test('claude app: the skill packages as the apps expect', () => {
       assert.match(skill, new RegExp('`assets/' + lang + '/' + stage + '\\.md`'), `SKILL.md points to ${lang}/${stage}`);
     }
   }
-  const project = fs.readFileSync(path.join(out, 'project-instructions.md'), 'utf8');
-  assert.doesNotMatch(project, /assets\/|^---/m, 'the Project version stands alone');
-  assert.match(project, /Never invent research/);
+  const plain = fs.readFileSync(path.join(out, 'assistant-instructions.md'), 'utf8');
+  assert.doesNotMatch(plain, /assets\/|^---/m, 'the plain instructions stand alone, for any chat assistant');
+  assert.match(plain, /Never invent research/);
+  assert.match(plain, /Paste from AI/);
+  assert.ok(plain.length <= 8000, `the instructions stay under 8,000 characters (${plain.length})`);
 });
 
 test('claude app: every template heading is in the skill, so its documents fill the forms', () => {
@@ -96,7 +98,9 @@ test('claude app: a document written in Claude pastes into the stage form', () =
   const whole = Form.applyDocument(doc, tpl, reply);
   assert.deepEqual(whole.filled, ['למה']);
   assert.equal(Form.model(whole.text, tpl).fields.find((f) => f.label === 'למה').value, 'עונה על התובנה.');
-  // Without a code block, the paste line still doesn't land in the last field.
-  const bare = Form.applyDocument(doc, tpl, '## למה\nעונה על התובנה.\n\nIn the d2s plugin in Figma, open this stage, choose **Paste from Claude** and paste it.');
-  assert.equal(Form.model(bare.text, tpl).fields.find((f) => f.label === 'למה').value, 'עונה על התובנה.');
+  // Without a code block, the paste line still doesn't land in the last field, old wording or new.
+  for (const line of ['In the d2s plugin in Figma, open this stage, choose **Paste from Claude** and paste it.', 'ב-d2s (בתוסף ב-Figma או באתר): פותחים את השלב, בוחרים **הדבקה מ-AI** ומדביקים.']) {
+    const bare = Form.applyDocument(doc, tpl, '## למה\nעונה על התובנה.\n\n' + line);
+    assert.equal(Form.model(bare.text, tpl).fields.find((f) => f.label === 'למה').value, 'עונה על התובנה.');
+  }
 });

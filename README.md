@@ -8,7 +8,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.4.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.5.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -48,7 +48,7 @@ npx github:eranlipi/discovery-to-spec init
 node path/to/discovery-to-spec/bin/d2s.js init
 ```
 
-To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.4.0`.
+To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.5.0`.
 
 ## Quick start
 
@@ -132,18 +132,22 @@ Every document is plain Markdown. Designers and product managers can edit files 
 
 The [sandbox on the website](https://discoverytospec.com/#sandbox) opens on a **Designer view**: each stage is a form with one field per `##` heading, the template's note as helper text, and a **Next stage** button that runs the real gate and shows each gap next to its field. It writes the same Markdown the CLI does; **Show the file** reveals it. The [Figma plugin](figma-plugin/README.md) brings the same form into Figma: attach selected frames, pass the gate and save to GitHub without leaving the canvas.
 
-## In the Claude app (no terminal)
+## The d2s assistant in Claude, ChatGPT or Gemini (no terminal)
 
-Designers and product managers who work in Claude, not in a terminal, can use the **d2s-discovery** skill. Upload it once in Claude (Customize → Skills); a Claude Project works too.
+Designers and product managers who work in a chat assistant, not in a terminal, can add the **d2s assistant** to the one they already use. The [website](https://discoverytospec.com/#assistant) has the steps and a copy button for each:
 
-In an ordinary chat, Claude then helps them:
+- **Claude:** upload the `d2s-discovery` skill once (Customize → Skills), or paste the instructions into a Project.
+- **ChatGPT:** paste the instructions into a Project. On Business and Enterprise plans, a Skill works too.
+- **Gemini:** create a skill (Skills → Create → Create manually) and paste the description and the instructions.
+
+In an ordinary chat, the assistant then helps them:
 - frame the problem, pushing back when the request is a solution;
 - turn raw interview notes into insights with evidence and confidence;
 - lay out genuinely different directions;
 - prepare the decision;
 - write the spec.
 
-Each stage ends with a document that has the team's headings. **Paste from Claude** in the Figma plugin or the website sandbox fills the stage's fields from it, and the gate checks it as usual. Setup is in [integrations/claude-app/README.md](integrations/claude-app/README.md). The skill is attached to each release.
+Each stage ends with a document that has the team's headings. **Paste from AI** in the Figma plugin or the website sandbox fills the stage's fields from it, and the gate checks it as usual. Setup is in [integrations/claude-app/README.md](integrations/claude-app/README.md). The skill and the plain instructions are attached to each release.
 
 ## AI agents
 

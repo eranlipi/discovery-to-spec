@@ -281,6 +281,28 @@ html[lang="he"] .dz-step { text-transform: none; letter-spacing: 0; }
 .md .md-table { overflow-x: auto; }
 .md .md-table table { min-width: 0; font-size: 14px; }
 
+/* ---------- the d2s assistant ---------- */
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-top: 4px; }
+.grid3 > div { border-top: 2px solid var(--text); padding-top: 14px; }
+.grid3 h3 { margin: 0; font: 500 16px/1.35 var(--display); }
+.grid3 p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
+.assist-tabs { margin-top: 32px; }
+.assist-panel { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 18px 22px 22px; max-width: 860px; }
+.assist-panel .note { margin-top: 12px; }
+.steps { margin: 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 10px; }
+.steps li { padding-inline-start: 4px; }
+.steps a { color: var(--accent); overflow-wrap: anywhere; }
+.copy-btn { margin-top: 16px; cursor: pointer; }
+.copy-row { display: flex; flex-wrap: wrap; gap: 0 10px; }
+.assist-try { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 22px; padding: 18px 22px; max-width: 860px; border: 1px dashed var(--accent); border-radius: 10px; }
+.assist-try > div { flex: 1 1 360px; }
+.assist-try h3 { margin: 0; font: 500 16px/1.35 var(--display); }
+.assist-try p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+.assist-try .copy-btn { margin-top: 0; }
+.assist-text { margin-top: 18px; max-width: 860px; }
+.assist-text summary { cursor: pointer; color: var(--muted); font: 500 14px/1.4 var(--display); padding: 6px 0; }
+.assist-text pre { margin: 8px 0 0; max-height: 420px; overflow: auto; padding: 14px 16px; border-radius: 8px; background: var(--term-bg); color: var(--term-text); font: 400 12.5px/1.6 var(--mono); white-space: pre-wrap; text-align: left; }
+
 /* ---------- tables, tools, grid, faq ---------- */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 15px; }

@@ -72,11 +72,39 @@
 
   // ---------- copy ----------
 
+  var ASSISTANT = window.D2S_ASSISTANT || {};
+  var instructionsEl = document.getElementById('assist-instructions');
+  if (instructionsEl && ASSISTANT.instructions) instructionsEl.textContent = ASSISTANT.instructions;
+
+  /** The text a copy button copies: its data-copy value, or the assistant's instructions or sample notes. */
+  function copyValue(btn) {
+    var key = btn.getAttribute('data-copy-key');
+    if (key === 'instructions') return ASSISTANT.instructions || '';
+    if (key === 'description') return ASSISTANT.description || '';
+    if (key === 'notes') return (ASSISTANT.notes && (ASSISTANT.notes[lang] || ASSISTANT.notes.en)) || '';
+    return btn.getAttribute('data-copy');
+  }
+
+  function copyText(value) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(value);
+    } catch (err) { /* clipboard blocked: fall back below */ }
+    var area = document.createElement('textarea');
+    area.value = value;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    try { document.execCommand('copy'); } catch (err) { /* nothing more to try */ }
+    document.body.removeChild(area);
+  }
+
   document.addEventListener('click', function (e) {
-    var btn = e.target.closest ? e.target.closest('[data-copy]') : null;
+    var btn = e.target.closest ? e.target.closest('[data-copy], [data-copy-key]') : null;
     if (!btn) return;
-    var value = btn.getAttribute('data-copy');
-    try { if (navigator.clipboard) navigator.clipboard.writeText(value); } catch (err) { /* clipboard blocked */ }
+    var value = copyValue(btn);
+    copyText(value);
     var before = btn.innerHTML;
     btn.textContent = ui('copied');
     setTimeout(function () { btn.innerHTML = before; }, 1400);

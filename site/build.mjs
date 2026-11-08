@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { SITE, ROOT, read, walk, scriptSafe, jsonSafe, pkg, sandboxScript } from './bundle.mjs';
+import { assistantInstructions, assistantDescription } from '../integrations/claude-app/instructions.mjs';
 
 const OUT = path.resolve(process.argv[2] || path.join(SITE, 'dist'));
 
@@ -50,14 +51,20 @@ const i18n = read(SITE, 'src', 'i18n.js');
 const form = read(SITE, 'src', 'stage-form.js');
 const designer = read(SITE, 'src', 'designer.js');
 const app = read(SITE, 'src', 'app.js');
-const data = `window.D2S_SAMPLES = ${jsonSafe(samples)};\nwindow.D2S_VERSION = ${jsonSafe(pkg.version)};`;
+// The d2s assistant's instructions and sample notes, for the copy buttons.
+const assistant = {
+  instructions: assistantInstructions(),
+  description: assistantDescription(),
+  notes: { en: read(SITE, 'samples', 'notes-en.md'), he: read(SITE, 'samples', 'notes-he.md') },
+};
+const data = `window.D2S_SAMPLES = ${jsonSafe(samples)};\nwindow.D2S_VERSION = ${jsonSafe(pkg.version)};\nwindow.D2S_ASSISTANT = ${jsonSafe(assistant)};`;
 
 let html = read(SITE, 'src', 'index.html');
 const slots = {
   '/*@styles*/': read(SITE, 'src', 'styles.css'),
   '/*@sandbox*/': sandbox,
   '/*@data*/': data,
-  '/*@i18n*/': scriptSafe(i18n, 'i18n.js'),
+  '/*@i18n*/': scriptSafe(i18n, 'i18n.js').split('{{version}}').join(pkg.version),
   '/*@form*/': scriptSafe(form, 'stage-form.js'),
   '/*@designer*/': scriptSafe(designer, 'designer.js'),
   '/*@app*/': scriptSafe(app, 'app.js'),

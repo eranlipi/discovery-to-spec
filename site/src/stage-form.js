@@ -115,7 +115,7 @@
   }
 
   /**
-   * Fill fields from a pasted document, such as one written with Claude: every
+   * Fill fields from a pasted document, such as one written with an AI assistant: every
    * "## " section whose heading matches a field replaces that field's text.
    * Fields whose keys are in opts.skip are left alone and listed in `skipped`.
    * Returns { text, filled: [labels], ignored: [headings that match no field], skipped: [labels] }.
@@ -125,10 +125,10 @@
     var skipped = [];
     var src = String(pasted || '').replace(/\r\n/g, '\n').trim();
     // A whole chat reply may be pasted: use the code block that holds the document, if there is one,
-    // and drop the "paste it in the plugin" line that Claude adds.
+    // and drop the "paste it in d2s" line that the assistant adds.
     var fence = /(^|\n)(```|~~~)[^\n]*\n([\s\S]*?)\n\2[ \t]*(?=\n|$)/.exec(src);
     if (fence && /^##\s/m.test(fence[3])) src = fence[3];
-    src = src.split('\n').filter(function (line) { return !/Paste from Claude|הדבקה מ-Claude/.test(line); }).join('\n');
+    src = src.split('\n').filter(function (line) { return !/Paste from (?:AI|Claude)|הדבקה מ-(?:AI|Claude)/.test(line); }).join('\n');
     var fields = {};
     model(docText, templateText).fields.forEach(function (f) { fields[f.key] = f; });
     var text = docText;

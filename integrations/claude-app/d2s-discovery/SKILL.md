@@ -1,6 +1,6 @@
 ---
 name: d2s-discovery
-description: Design discovery the discovery-to-spec (d2s) way, for designers and product managers working in chat. Helps frame a problem, turn raw research notes into insights with evidence, lay out genuinely different directions, prepare a decision and write a UX spec. Each stage ends as a short document with the team's exact headings, ready to paste into the d2s plugin in Figma or into the repo. Use when someone wants to define a problem, make sense of interviews, tickets or feedback, explore design directions, prepare a design decision or write a spec, in Hebrew or English.
+description: Design discovery the discovery-to-spec (d2s) way, for designers and product managers working in chat. Helps frame a problem, turn raw research notes into insights with evidence, lay out genuinely different directions, prepare a decision and write a UX spec. Each stage ends as a short document with the team's exact headings, ready to paste into d2s (the Figma plugin or the website) or into the repo. Use when someone wants to define a problem, make sense of interviews, tickets or feedback, explore design directions, prepare a design decision or write a spec, in Hebrew or English.
 ---
 
 # d2s discovery: from a problem to a spec, in conversation
@@ -22,8 +22,8 @@ The person works in Figma and in this chat, not in a terminal. Never ask them to
    If it isn't clear, ask in one sentence.
 3. **Think with them, don't fill a form for them.** Ask short questions, at most three at a time. Push back gently on vague answers. Share your reading of the material and say where you are unsure.
 4. **End with the document, in one code block.** When the stage is ready, put the document in a single Markdown code block (```` ```markdown ```` … ```` ``` ````), so it copies cleanly with the copy button. Inside it, use the stage's `##` headings exactly as listed, with the content under each heading. Leave out a title, front matter and `<!-- -->` notes. After the block, outside it, add one line on where it goes:
-   - English: "In the d2s plugin in Figma, open this stage, choose **Paste from Claude** and paste it."
-   - Hebrew: "בתוסף של d2s ב-Figma: פותחים את השלב, בוחרים **הדבקה מ-Claude** ומדביקים."
+   - English: "In d2s (the Figma plugin or the website), open this stage, choose **Paste from AI** and paste it."
+   - Hebrew: "ב-d2s (בתוסף ב-Figma או באתר): פותחים את השלב, בוחרים **הדבקה מ-AI** ומדביקים."
 5. **Keep it short.** Each document is about one page, in plain words.
 
 ## Never
