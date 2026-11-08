@@ -119,6 +119,12 @@
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /** A Figma frame link reads as "Figma · 10-1 ↗"; other links stay as they are. */
+  function shortLink(url) {
+    var m = /figma\.com\/[^?#]*\?(?:[^#]*?&(?:amp;)?)?node-id=([^&#]+)/.exec(url);
+    return m ? 'Figma · ' + decodeURIComponent(m[1]) + ' \u2197' : url;
+  }
+
   function inline(text) {
     var codes = [];
     var s = escapeHtml(text).replace(/`([^`]+)`/g, function (_m, c) {
@@ -132,7 +138,9 @@
           ? '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'
           : '<span class="md-ref" title="' + href + '">' + label + '</span>';
       })
-      .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
+      .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, function (_m, pre, url) {
+        return pre + '<a href="' + url + '" target="_blank" rel="noopener noreferrer" title="' + url + '">' + shortLink(url) + '</a>';
+      });
     return s.replace(/\u0000(\d+)\u0000/g, function (_m, i) { return codes[i]; });
   }
 
@@ -307,7 +315,6 @@
       }
       box.appendChild(tools);
     }
-    if (A.text.note) box.appendChild(el('p', 'field-help', A.text.note));
     box.focusFirst = function () {
       var inputs = Array.prototype.slice.call(list.querySelectorAll('input'));
       var empty = inputs.filter(function (i) { return !i.value.trim(); })[0];
@@ -340,8 +347,11 @@
       if (field.optional) head.appendChild(el('span', 'badge', text.optional || 'optional'));
       wrap.appendChild(head);
       var describedBy = [];
-      if (field.helper) {
-        var help = el('p', 'field-help', field.helper);
+      // Approval rows explain themselves: their note replaces the template's line-format guidance.
+      var rows = opts.approvals && field.key === opts.approvals.key && !opts.approvals.parse(field.value).some(function (p) { return !p.ok; });
+      var helperText = rows ? opts.approvals.text.note : field.helper;
+      if (helperText) {
+        var help = el('p', 'field-help', helperText);
         help.id = id + '-help';
         describedBy.push(help.id);
         wrap.appendChild(help);

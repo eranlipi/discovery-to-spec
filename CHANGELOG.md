@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The approval rows in the form explain themselves in plain words, instead of the template's line-format note.
+- The summary for design and product leaves out optional sections that are empty, has no commands in it, and drops the repeated Figma list. Previews show Figma frame links as "Figma · 10-1".
+
 ## 0.3.0 (2026-11-08)
 
 Designers can now work in Figma, and every exploration ends with a page for design and product.

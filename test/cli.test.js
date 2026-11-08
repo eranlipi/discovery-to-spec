@@ -247,7 +247,13 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   assert.match(proposal, /\(\.\.\/\.\.\/\.\.\/design\/explorations\/001-checkout\/spec\.md\)/);
 
   assert.equal(run(repo, 'check').code, 0);
+  const dec = exp(repo, id, 'decision.md');
+  fs.writeFileSync(dec, read(dec).replace(/(## Risks and what to watch after launch \(optional\)\n)Filled in by the test\.\n/, '$1'));
   assert.equal(run(repo, 'handoff', id).code, 0, 'the handoff can be regenerated');
+  const regenerated = read(exp(repo, id, 'summary.md'));
+  assert.doesNotMatch(regenerated, /## Risks to watch/, 'an optional section left empty is left out of the summary');
+  assert.match(regenerated, /## Approved by/);
+  assert.doesNotMatch(regenerated, /d2s handoff|npx/, 'the summary for design and product has no commands in it');
   assert.match(run(repo, 'status', id).out, /ready for development/);
 
   assert.equal(run(repo, 'archive', id).code, 0);

@@ -5,7 +5,7 @@ generated: {{date}}
 
 # {{title}}: summary
 
-> For design and product: the whole exploration on one page. Generated with the handoff ({{cli}} handoff {{id}}), so fix things in the stage documents, not here.
+> For design and product: the whole exploration on one page. It is generated from the stage documents, so fix things there, not here.
 
 ## The problem
 {{problem}}
@@ -40,9 +40,6 @@ generated: {{date}}
 
 ## What we're building
 {{screens}}
-
-## Figma
-{{figma}}
 
 ## Open questions
 {{openQuestions}}
