@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.5.0 (2026-11-08)
+
+The d2s assistant, in Claude, ChatGPT or Gemini.
+
+### On the website
+
+- **A new section, "An AI assistant for the thinking",** explains what the assistant does and how to add it to the chat assistant a designer already uses. Each tool has its own tab with steps and a copy button:
+  - **Claude:** upload the `d2s-discovery` skill once, or paste the instructions into a Project.
+  - **ChatGPT:** paste the instructions into a Project. This works on every plan. On Business and Enterprise, a Skill works too.
+  - **Gemini:** create a skill and paste the description and the instructions, then call it with `/`.
+- **Try it right away:** a button copies sample raw interview notes (Hebrew or English) to paste into the assistant.
+- The instructions can also be read on the page before copying.
+
+### One assistant, three tools
+
+- **The instructions now work in any assistant.** The document ends with "choose **Paste from AI**", not a Claude-only line.
+- **Paste from Claude is now Paste from AI** (in Hebrew, הדבקה מ-AI), in the Figma plugin and the website sandbox. Documents with the old closing line still paste cleanly.
+- **New release file:** `d2s-assistant-instructions.md` replaces `project-instructions.md`. It is the same method as plain text, kept under 8,000 characters.
+
+### Why not custom GPTs or Gems
+
+- Custom GPTs can no longer be created on personal ChatGPT plans, and Gemini Gems are being retired. ChatGPT Projects and Gemini skills are the paths that keep working.
+
+### Upgrading from 0.4.0
+
+- **Nothing to change.** To get the new button name in Figma, import the new plugin zip below. A skill already uploaded to Claude keeps working; upload the new zip to get the new closing line.
+
 ## 0.4.0 (2026-11-08)
 
 The thinking before the build, in the tools designers already use.

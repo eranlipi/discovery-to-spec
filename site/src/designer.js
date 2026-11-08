@@ -183,7 +183,7 @@
     if (gateShown) showGaps();
   }
 
-  /** Fill the current stage's fields from a document written in Claude. */
+  /** Fill the current stage's fields from a document written with an AI assistant. */
   function pasteFromClaude() {
     var s = state();
     var path = docPath(s, s.stage);

@@ -54,14 +54,14 @@
       fileLinkSave: 'Save link',
       badFileLink: 'That isn’t a Figma file link.',
       showOnCanvas: 'Show on canvas',
-      pasteButton: 'Paste from Claude',
-      pasteTitle: 'Paste the document Claude wrote for this stage',
+      pasteButton: 'Paste from AI',
+      pasteTitle: 'Paste the document your AI assistant wrote for this stage',
       pasteHint: 'Each "## heading" fills the field with the same name. Fields without a matching heading stay as they are.',
       pasteApply: 'Fill the fields',
-      pasteFilled: 'Filled from Claude: {fields}.',
+      pasteFilled: 'Filled from the AI document: {fields}.',
       pasteIgnored: ' Not used: {headings}.',
       pasteSkipped: ' "{fields}" is left for people to fill in.',
-      pasteNothing: 'No heading in the text matches this stage\u2019s fields. Ask Claude for the document with the stage\u2019s headings.',
+      pasteNothing: 'No heading in the text matches this stage\u2019s fields. Ask the assistant for the document with the stage\u2019s headings.',
       notFound: 'That frame isn’t in this file anymore.',
       next: 'Next stage',
       save: 'Save',
@@ -144,14 +144,14 @@
       fileLinkSave: 'לשמור קישור',
       badFileLink: 'זה לא קישור לקובץ Figma.',
       showOnCanvas: 'להציג בקנבס',
-      pasteButton: 'הדבקה מ-Claude',
-      pasteTitle: 'מדביקים את המסמך ש-Claude כתב לשלב הזה',
+      pasteButton: 'הדבקה מ-AI',
+      pasteTitle: 'מדביקים את המסמך שהעוזר כתב לשלב הזה',
       pasteHint: 'כל כותרת "##" ממלאת את השדה עם אותו שם. שדות בלי כותרת מתאימה נשארים כמו שהם.',
       pasteApply: 'למלא את השדות',
-      pasteFilled: 'מולא מ-Claude: {fields}.',
+      pasteFilled: 'מולא מהמסמך: {fields}.',
       pasteIgnored: ' לא נכנסו: {headings}.',
       pasteSkipped: ' את "{fields}" ממלאים אנשים בעצמם.',
-      pasteNothing: 'אף כותרת בטקסט לא מתאימה לשדות של השלב הזה. בקשו מ-Claude את המסמך עם הכותרות של השלב.',
+      pasteNothing: 'אף כותרת בטקסט לא מתאימה לשדות של השלב הזה. בקשו מהעוזר את המסמך עם הכותרות של השלב.',
       notFound: 'ה-frame הזה כבר לא בקובץ.',
       next: 'לשלב הבא',
       save: 'לשמור',
@@ -594,7 +594,7 @@
     });
   }
 
-  /** Fill the current stage's fields from a document written in Claude. */
+  /** Fill the current stage's fields from a document written with an AI assistant. */
   function pasteFromClaude(pasted) {
     var e = exploration();
     var path = relPath(S.d2s.path.join(e.exp.dir, e.stage.file));

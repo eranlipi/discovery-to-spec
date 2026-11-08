@@ -1,12 +1,14 @@
 // Packages the d2s-discovery skill for the Claude apps (claude.ai and Claude desktop):
 //   dist/d2s-discovery/SKILL.md
 //   dist/d2s-discovery/assets/{en,he}/<stage>.md   the stage templates, without front matter or title
-//   dist/project-instructions.md                     the same method, for a Claude Project instead of a skill
+//   dist/assistant-instructions.md                   the same method as plain instructions, for a Claude Project,
+//                                                    a ChatGPT Project or a Gemini skill
 // The release workflow zips dist/d2s-discovery. Zero dependencies: npm run claude-skill
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assistantInstructions } from './instructions.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
@@ -37,9 +39,5 @@ for (const lang of ['en', 'he']) {
   fs.mkdirSync(path.join(dir, 'assets', lang), { recursive: true });
   for (const stage of STAGES) fs.writeFileSync(path.join(dir, 'assets', lang, `${stage}.md`), asset(lang, stage));
 }
-const body = skill.slice(fm[0].length).trim();
-fs.writeFileSync(
-  path.join(OUT, 'project-instructions.md'),
-  body.replace(/^- \*\*Full templates:\*\*.*\n/m, '').replace(/Template(?: with guidance notes)?: `assets\/[^`]+` or `assets\/[^`]+`\. /g, '') + '\n',
-);
-console.log(`Built ${path.relative(ROOT, OUT)}: ${NAME}/ (SKILL.md and ${STAGES.length * 2} templates) and project-instructions.md`);
+fs.writeFileSync(path.join(OUT, 'assistant-instructions.md'), assistantInstructions(skill));
+console.log(`Built ${path.relative(ROOT, OUT)}: ${NAME}/ (SKILL.md and ${STAGES.length * 2} templates) and assistant-instructions.md`);

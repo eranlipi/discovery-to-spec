@@ -42,19 +42,19 @@ jobs:
         run: npm test
       - if: steps.tag.outputs.skip != 'true'
         run: node .github/scripts/release-notes.mjs > notes.md
-      - name: Package the Figma plugin and the Claude app skill
+      - name: Package the Figma plugin and the AI assistant
         if: steps.tag.outputs.skip != 'true'
         run: |
           npm run plugin
           (cd figma-plugin && zip -r "../d2s-figma-plugin-$TAG.zip" manifest.json dist README.md)
           npm run claude-skill
           (cd integrations/claude-app/dist && zip -r "../../../d2s-discovery-skill-$TAG.zip" d2s-discovery)
-          cp integrations/claude-app/dist/project-instructions.md project-instructions.md
+          cp integrations/claude-app/dist/assistant-instructions.md d2s-assistant-instructions.md
         env:
           TAG: ${{ steps.tag.outputs.tag }}
       - name: Create the release
         if: steps.tag.outputs.skip != 'true'
-        run: gh release create "$TAG" "d2s-figma-plugin-$TAG.zip" "d2s-discovery-skill-$TAG.zip" project-instructions.md --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"
+        run: gh release create "$TAG" "d2s-figma-plugin-$TAG.zip" "d2s-discovery-skill-$TAG.zip" d2s-assistant-instructions.md --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           GH_TOKEN: ${{ github.token }}

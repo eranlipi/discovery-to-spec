@@ -38,6 +38,24 @@ test('the site builds into one self-contained page plus static files', () => {
   assert.match(html, new RegExp(`discovery-to-spec v${require('../package.json').version}`));
 });
 
+test('the site offers the d2s assistant for Claude, ChatGPT and Gemini', () => {
+  const html = fs.readFileSync(path.join(buildSite(), 'index.html'), 'utf8');
+  const version = require('../package.json').version;
+  assert.match(html, /<section id="assistant"/);
+  for (const tab of ['panel-claude', 'panel-chatgpt', 'panel-gemini']) assert.match(html, new RegExp(`id="${tab}"`));
+  assert.doesNotMatch(html, /\{\{version\}\}/, 'the version is filled in, in English and in Hebrew');
+  assert.match(html, new RegExp(`releases/download/v${version.replace(/\./g, '\\.')}/d2s-discovery-skill-v${version.replace(/\./g, '\\.')}\.zip`));
+  const m = html.match(/window\.D2S_ASSISTANT = (\{.*?\});<\/script>/);
+  assert.ok(m, 'the instructions and notes are embedded for the copy buttons');
+  const assistant = JSON.parse(m[1]);
+  assert.match(assistant.instructions, /Never invent research/);
+  assert.ok(assistant.instructions.length <= 8000);
+  assert.match(assistant.notes.en, /Interview 1/);
+  assert.match(assistant.notes.he, /ראיון 1/);
+  assert.ok((html.match(/data-copy-key="instructions"/g) || []).length === 3, 'one copy button per tool');
+  assert.ok(assistant.description.length > 0 && assistant.description.length <= 1024, 'the description fits a Gemini skill');
+});
+
 test('the sandbox runs the real CLI in memory', () => {
   const html = fs.readFileSync(path.join(buildSite(), 'index.html'), 'utf8');
   const d2s = loadSandbox(html);
