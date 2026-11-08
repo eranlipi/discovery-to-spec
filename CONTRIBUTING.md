@@ -39,6 +39,7 @@ node /path/to/discovery-to-spec/bin/d2s.js new "Something to explore"
 | `integrations/ci/` | The optional GitHub Actions check |
 | `examples/checkout/` | A complete, fictional exploration |
 | `site/` | The website, including the in-browser sandbox (Designer and Developer views) |
+| `figma-plugin/` | The Figma plugin (`npm run plugin`, `npm run plugin:dev`) |
 | `test/` | Tests (including a build of the site) |
 
 ## Adding a language

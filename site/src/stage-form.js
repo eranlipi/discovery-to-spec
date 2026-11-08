@@ -319,7 +319,8 @@
   /**
    * Render a form model into `container`.
    * opts: { readOnly, dir, text: { optional }, onInput(field, value),
-   *         approvals: { key, roles, today, parse, format, example, text } }
+   *         approvals: { key, roles, today, parse, format, example, text },
+   *         decorate(field, element) — fills an element under a text field, again on every change }
    * Returns { focus(key), setIssues({ key: [messages] }) }.
    */
   function render(container, m, opts) {
@@ -373,12 +374,18 @@
         area.readOnly = !!opts.readOnly;
         if (opts.dir) area.dir = opts.dir;
         area.setAttribute('aria-describedby', describedBy.join(' '));
+        var extra = el('div', 'field-extra');
         area.addEventListener('input', function () {
           grow(area);
           emit(area.value);
+          if (opts.decorate) opts.decorate(field, extra);
         });
         controls[field.key] = { focus: function () { area.focus(); }, root: area };
         wrap.appendChild(area);
+        if (opts.decorate) {
+          opts.decorate(field, extra);
+          wrap.appendChild(extra);
+        }
         if (typeof requestAnimationFrame === 'function') requestAnimationFrame(function () { grow(area); });
       }
       wrap.appendChild(issues);

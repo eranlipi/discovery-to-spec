@@ -233,6 +233,15 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   assert.match(handoff, /Does it happen on desktop too\?/);
   assert.doesNotMatch(handoff, /\{\{\w+\}\}/);
 
+  const summary = read(exp(repo, id, 'summary.md'));
+  assert.match(summary, /^# Mobile checkout drop-off: summary$/m, 'a summary for design and product comes with the handoff');
+  assert.match(summary, /## The problem\nMobile users abandon checkout\./);
+  assert.match(summary, /## What we decided\nOne-page checkout\./);
+  assert.match(summary, /## Approved by\n- Dana Levi, product, 2026-11-20, @danalevi\n- Yossi Bar, design lead/);
+  assert.match(summary, /## Open questions\nDoes it happen on desktop too\?/);
+  assert.doesNotMatch(summary, /\{\{\w+\}\}/);
+  assert.doesNotMatch(summary, /\n{3,}/, 'no empty gaps where optional sections were blank');
+
   const proposal = read(repo, 'openspec', 'changes', 'checkout', 'proposal.md');
   assert.match(proposal, /## Why\n\nMobile users abandon checkout\./);
   assert.match(proposal, /\(\.\.\/\.\.\/\.\.\/design\/explorations\/001-checkout\/spec\.md\)/);
@@ -275,6 +284,13 @@ test('Hebrew locale: right-to-left templates go through the same gate', () => {
   setSection(decision, 'מי אישר', '- דנה לוי, מוצר, 2026-11-20\n- יוסי בר, עיצוב, 2026-11-20\n- רון טל, פיתוח, 2026-11-21');
   assert.equal(run(repo, 'next', id).code, 0);
   assert.match(read(repo, 'design', 'decisions.md'), /תשלום בעמוד אחד\. \| דנה לוי \(מוצר\), יוסי בר \(עיצוב\), רון טל \(פיתוח\) \|/);
+
+  fill(exp(repo, id, 'spec.md'), { 'מסכים וזרימה': 'עמוד תשלום אחד.', 'קריטריוני קבלה': 'בהינתן עגלה מלאה, כאשר לוחצים על "לתשלום", אז נפתח עמוד אחד.' });
+  assert.equal(run(repo, 'next', id).code, 0);
+  const summary = read(exp(repo, id, 'summary.md'));
+  assert.match(summary, /: סיכום$/m);
+  assert.match(summary, /## מה החלטנו\nתשלום בעמוד אחד\./);
+  assert.match(summary, /## מה בונים\nעמוד תשלום אחד\./);
 });
 
 test('check fails when a stage that was already passed is emptied (for CI)', () => {

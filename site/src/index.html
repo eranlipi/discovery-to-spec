@@ -141,6 +141,10 @@
           <p class="dz-intro"></p>
           <div class="dz-notice" tabindex="-1" role="status" hidden></div>
           <div class="dz-form"></div>
+          <div class="dz-docs" role="group" aria-label="Generated documents" data-i18n-aria="sandbox.docsLabel" hidden>
+            <button type="button" class="tool-btn" data-doc="summary" aria-pressed="true" data-i18n="sandbox.docSummary">For design and product</button>
+            <button type="button" class="tool-btn" data-doc="handoff" aria-pressed="false" data-i18n="sandbox.docHandoff">For developers</button>
+          </div>
           <div class="dz-preview md" hidden></div>
           <div class="dz-actions">
             <button type="button" class="btn primary dz-next" data-i18n="sandbox.next">Next stage</button>
@@ -199,7 +203,7 @@
         <tr><td data-i18n="stages.s3">3. Options</td><td><code dir="ltr">options.md</code></td><td data-i18n="stages.s3h">2 to 4 directions with Figma links, pros and cons</td><td data-i18n="stages.s3l">Design</td></tr>
         <tr class="gate"><td data-i18n="stages.s4">4. Decide</td><td><code dir="ltr">decision.md</code></td><td data-i18n="stages.s4h">The chosen direction, what was rejected and why, who approved</td><td data-i18n="stages.s4l">Product, design and engineering</td></tr>
         <tr><td data-i18n="stages.s5">5. Spec</td><td><code dir="ltr">spec.md</code></td><td data-i18n="stages.s5h">Screens, states, edge cases, acceptance criteria, accessibility</td><td data-i18n="stages.s5l">Design</td></tr>
-        <tr><td data-i18n="stages.s6">6. Handoff</td><td><code dir="ltr">handoff.md</code></td><td data-i18n="stages.s6h">Generated for development: the chosen direction, its Figma links and the criteria</td><td data-i18n="stages.s6l">Engineering</td></tr>
+        <tr><td data-i18n="stages.s6">6. Handoff</td><td><code dir="ltr">handoff.md</code> <code dir="ltr">summary.md</code></td><td data-i18n="stages.s6h">Generated: for development, the chosen direction, its Figma links and the criteria; for design and product, the whole exploration on one page</td><td data-i18n="stages.s6l">Engineering, design and product</td></tr>
       </tbody>
     </table>
   </div>
@@ -218,7 +222,7 @@
   <h2 id="principles-title" class="sec"><span class="sec-num" dir="ltr">06</span><span data-i18n="principles.title">Easy to say yes to</span></h2>
   <div class="grid4">
     <div><h3 data-i18n="principles.p1">MIT, no paid tier</h3><p data-i18n="principles.p1t">Free to use, change and ship, for teams of any size.</p></div>
-    <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 1,150 lines of plain Node.js. Your security team can read all of it.</p></div>
+    <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 1,200 lines of plain Node.js. Your security team can read all of it.</p></div>
     <div><h3 data-i18n="principles.p3">No telemetry</h3><p data-i18n="principles.p3t">It reads and writes Markdown files in your repository. The only network call is an opt-in CI check that asks GitHub who approved.</p></div>
     <div><h3 data-i18n="principles.p4">No new licenses</h3><p data-i18n="principles.p4t">Works with the GitHub and Figma you already have. AI agents are optional.</p></div>
   </div>

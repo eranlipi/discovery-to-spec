@@ -1,6 +1,6 @@
 {
   "name": "discovery-to-spec",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A lightweight, repo-native workflow for design and product teams: frame → research → options → decide → spec → handoff. Markdown docs, a human decision gate, and agent skills for Claude Code and Cursor.",
   "keywords": [
     "design",
@@ -41,6 +41,8 @@
   },
   "scripts": {
     "test": "node --test",
-    "site": "node site/build.mjs"
+    "site": "node site/build.mjs",
+    "plugin": "node figma-plugin/build.mjs",
+    "plugin:dev": "node figma-plugin/build.mjs && node figma-plugin/dev/serve.mjs"
   }
 }

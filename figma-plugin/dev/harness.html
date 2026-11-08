@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>d2s plugin harness</title>
+<style>
+  body { margin: 0; display: flex; gap: 16px; padding: 16px; font: 13px/1.5 system-ui, sans-serif; background: #e5e5e5; }
+  iframe { width: 420px; height: 680px; border: 0; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.15); border-radius: 8px; }
+  .canvas { flex: 1; max-width: 420px; }
+  .canvas button { display: block; margin: 4px 0; }
+  pre { white-space: pre-wrap; font-size: 11px; background: #fff; padding: 8px; }
+</style>
+</head>
+<body>
+<iframe id="ui" title="Plugin panel"></iframe>
+<div class="canvas">
+  <h3>Fake Figma canvas</h3>
+  <p>File: <b id="file"></b></p>
+  <div id="frames"></div>
+  <button type="button" id="clear">Clear selection</button>
+  <h4>Figma calls</h4>
+  <pre id="log"></pre>
+</div>
+<script>
+  // A stand-in for the Figma plugin API, enough for code.js.
+  var config = window.HARNESS || {};
+  var iframe = document.getElementById('ui');
+  var logEl = document.getElementById('log');
+  var listeners = {};
+  var pluginData = config.pluginData || {};
+  var storage = config.storage || {};
+  var pages = { p1: { id: '0:1', type: 'PAGE', name: 'Page 1' }, p2: { id: '0:2', type: 'PAGE', name: 'Flows' } };
+  var nodes = {};
+  [['10:1', 'One-page checkout', 'p1'], ['10:2', 'Cart', 'p1'], ['20:5', 'Order confirmation', 'p2']].forEach(function (n) {
+    nodes[n[0]] = { id: n[0], name: n[1], type: 'FRAME', parent: pages[n[2]] };
+  });
+  window.calls = [];
+  function record(name, value) {
+    window.calls.push([name, value]);
+    logEl.textContent = window.calls.map(function (c) { return c[0] + ' ' + JSON.stringify(c[1]); }).join('\n');
+  }
+  window.__html__ = '';
+  window.figma = {
+    showUI: function (html, opts) { record('showUI', opts); },
+    ui: { onmessage: null, postMessage: function (msg) { iframe.contentWindow.postMessage({ pluginMessage: msg }, '*'); } },
+    currentUser: { name: config.user || 'Dana Levi' },
+    fileKey: config.fileKey === undefined ? 'FILEKEY123' : config.fileKey,
+    root: {
+      name: 'Checkout redesign',
+      getPluginData: function (k) { return pluginData[k] || ''; },
+      setPluginData: function (k, v) { pluginData[k] = v; record('setPluginData', [k, v]); },
+    },
+    currentPage: Object.assign(pages.p1, { selection: [] }),
+    clientStorage: {
+      getAsync: function (k) { return Promise.resolve(storage[k]); },
+      setAsync: function (k, v) { storage[k] = JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      deleteAsync: function (k) { delete storage[k]; return Promise.resolve(); },
+    },
+    getNodeByIdAsync: function (id) { return Promise.resolve(nodes[id] || null); },
+    setCurrentPageAsync: function (p) { p.selection = []; figma.currentPage = p; record('setCurrentPage', p.name); return Promise.resolve(); },
+    viewport: { scrollAndZoomIntoView: function (list) { record('zoom', list.map(function (n) { return n.id; })); } },
+    openExternal: function (url) { record('openExternal', url); },
+    notify: function (text) { record('notify', text); },
+    on: function (event, cb) { listeners[event] = cb; },
+  };
+  window.harness = {
+    storage: storage,
+    pluginData: pluginData,
+    select: function (ids) {
+      figma.currentPage.selection = ids.map(function (id) { return nodes[id]; });
+      if (listeners.selectionchange) listeners.selectionchange();
+    },
+  };
+  window.addEventListener('message', function (e) {
+    if (e.source === iframe.contentWindow && e.data && e.data.pluginMessage && figma.ui.onmessage) figma.ui.onmessage(e.data.pluginMessage);
+  });
+  document.getElementById('file').textContent = figma.root.name;
+  Object.keys(nodes).forEach(function (id) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Select "' + nodes[id].name + '" (' + id + ')';
+    b.onclick = function () { harness.select([id]); };
+    document.getElementById('frames').appendChild(b);
+  });
+  document.getElementById('clear').onclick = function () { harness.select([]); };
+</script>
+<script src="/code.js"></script>
+<script>iframe.src = '/ui.html';</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.2.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.3.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -20,6 +20,7 @@ AI coding tools made building fast. What's slow now is everything before it: fra
 - **A decision gate.** `d2s next` won't move an exploration forward until the current document is complete. The decision passes only with one line per approver (name, role and date) covering product, design and engineering. Placeholders like "TBD" and AI tool names are rejected, and CI can check each approval against a GitHub review.
 - **A decision log** (`design/decisions.md`) that fills itself, so nobody re-argues a decision six months later.
 - **A generated handoff** with the chosen direction, its Figma links and the acceptance criteria in one place. Rejected directions stay out. If your repo uses OpenSpec, it also drafts an OpenSpec change proposal.
+- **A one-page summary for design and product** (`summary.md`), generated with the handoff: the problem, what you learned, what you decided and why, what you didn't choose, who approved, and what's being built.
 - **Agent skills** for Claude Code and Cursor (`/d2s-frame` … `/d2s-handoff`), plus an `AGENTS.md` section for other agents. Agents help write and summarize; they're told never to invent research and never to approve decisions.
 - **An optional CI check** for pull requests.
 
@@ -28,7 +29,7 @@ See [`examples/checkout`](examples/checkout) for a complete, fictional feature t
 ## Free and safe to adopt
 
 - MIT license, no paid tier.
-- **Zero dependencies** and no telemetry. The CLI makes no network calls, except an opt-in CI check that asks GitHub who approved a pull request. The tool is about 1,150 lines of plain Node.js you can review in an afternoon.
+- **Zero dependencies** and no telemetry. The CLI makes no network calls, except an opt-in CI check that asks GitHub who approved a pull request. The CLI is about 1,200 lines of plain Node.js you can review in an afternoon.
 - No new accounts or licenses: it works with the GitHub repo and the Figma files you already have. The Figma MCP server and AI agents are optional.
 
 ## Install
@@ -47,7 +48,7 @@ npx github:eranlipi/discovery-to-spec init
 node path/to/discovery-to-spec/bin/d2s.js init
 ```
 
-To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.2.0`.
+To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.3.0`.
 
 ## Quick start
 
@@ -68,7 +69,7 @@ npx d2s status                                  # where every exploration stands
 | 3. Options | `options.md` | 2 to 4 directions with Figma links, pros and cons | Design |
 | 4. Decide | `decision.md` | The chosen direction, what was rejected and why, who approved | Product, design, engineering |
 | 5. Spec | `spec.md` | Screens, states, edge cases, acceptance criteria, accessibility | Design |
-| 6. Handoff | `handoff.md` | A generated summary for development | Engineering |
+| 6. Handoff | `handoff.md`, `summary.md` | Generated: a handoff for development, and a one-page summary for design and product | Engineering, design and product |
 
 The structure borrows from Shape Up (appetite, no-gos), continuous discovery (evidence-based insights) and architecture decision records.
 
@@ -80,8 +81,8 @@ The structure borrows from Shape Up (appetite, no-gos), continuous discovery (ev
 | `d2s new "<title>"` | Starts an exploration. Options: `--slug`, `--owner` |
 | `d2s status [id]` | Lists explorations, or shows one stage by stage. `--all` includes archived ones |
 | `d2s check [id]` | Validates documents and exits with 1 on errors. Stages already passed must be complete; the current one may be in progress (`--strict` requires it too). `--verify-approvals` checks approvals against GitHub reviews (see below) |
-| `d2s next <id>` | Validates the current stage and opens the next one. Passing the decision adds a row to the decision log; passing the spec generates the handoff |
-| `d2s handoff <id>` | Regenerates the handoff (and the OpenSpec draft). `--openspec` forces the draft |
+| `d2s next <id>` | Validates the current stage and opens the next one. Passing the decision adds a row to the decision log; passing the spec generates the handoff and the summary |
+| `d2s handoff <id>` | Regenerates the handoff and the summary (and the OpenSpec draft). `--openspec` forces the draft |
 | `d2s archive <id>` | Moves a built exploration to `explorations/archive/` |
 
 An id can be the folder name (`003-checkout`), its number (`3`) or its slug (`checkout`).
@@ -129,7 +130,7 @@ The rules live in `.d2s.json`. Teams of two or three set `allowSamePerson` to `t
 
 Every document is plain Markdown. Designers and product managers can edit files on github.com (the pencil icon), or write in Figma or a doc and have someone paste it in. The `<!-- -->` notes in the templates are guidance and don't count as content. The one rule: keep the `##` headings, because the check looks for them.
 
-The [sandbox on the website](https://discoverytospec.com/#sandbox) opens on a **Designer view**: each stage is a form with one field per `##` heading, the template's note as helper text, and a **Next stage** button that runs the real gate and shows each gap next to its field. It writes the same Markdown the CLI does; **Show the file** reveals it. A Figma plugin that uses the same form is planned.
+The [sandbox on the website](https://discoverytospec.com/#sandbox) opens on a **Designer view**: each stage is a form with one field per `##` heading, the template's note as helper text, and a **Next stage** button that runs the real gate and shows each gap next to its field. It writes the same Markdown the CLI does; **Show the file** reveals it. The [Figma plugin](figma-plugin/README.md) brings the same form into Figma: attach selected frames, pass the gate and save to GitHub without leaving the canvas.
 
 ## AI agents
 
@@ -169,7 +170,7 @@ Templates ship in English (default) and Hebrew (`--lang he`, right to left). The
 ## Roadmap
 
 - A GitHub Action, so explorations can be started and advanced from the Actions tab with no terminal at all.
-- A Figma plugin: start, fill and advance explorations and request approvals from inside Figma, saving to the same files in GitHub. It reuses the sandbox's stage form.
+- The Figma plugin's next steps: sign-in with a GitHub App, a pull request per exploration, and approvals as verified reviews.
 - GitHub issue forms for opening a brief without touching files.
 - Publishing to npm.
 - More languages.
