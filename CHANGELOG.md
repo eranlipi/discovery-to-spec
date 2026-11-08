@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.0 (2026-11-08)
+
+The thinking before the build, in the tools designers already use.
+
+### d2s in the Claude app
+
+- **New skill, `d2s-discovery`,** for claude.ai and Claude desktop. It brings the d2s method to people who work in chat, not in a terminal. Claude:
+  - frames the problem, asking which problem a solution-first request solves;
+  - turns raw interview notes, tickets and data into insights with evidence and confidence, anonymizing names and phone numbers;
+  - lays out 2–4 genuinely different directions;
+  - prepares the decision meeting;
+  - writes the spec.
+- **The same rules as the agent skills:** Claude never invents research, quotes, numbers or Figma links, and never fills in "Approved by".
+- **Each stage ends with a document** that has the team's exact headings, in Hebrew or English.
+- **Download:** `d2s-discovery-skill-v0.4.0.zip` is attached below, uploaded once in Claude under Customize → Skills. For plans without custom skills, `project-instructions.md` sets up the same thing as a Claude Project. Setup is in [integrations/claude-app/README.md](integrations/claude-app/README.md).
+
+### Paste from Claude
+
+- **Paste from Claude** in the Figma plugin and in the website sandbox fills the current stage's fields from a document written in Claude. Each `##` heading fills the field with the same name.
+- A pasted document never fills "Approved by". Headings that match no field are listed, not lost.
+
+### Upgrading from 0.3.1
+
+- **Nothing to change.** To get Paste from Claude in Figma, import the new plugin zip below.
+
 ## 0.3.1 (2026-11-08)
 
 Fixes found while preparing a live demo of the Figma plugin. Download `d2s-figma-plugin-v0.3.1.zip` below to get them in Figma.

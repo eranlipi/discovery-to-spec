@@ -39,6 +39,11 @@
     example: $('.dz-example'),
     toggle: $('.dz-toggle'),
     reset: $('.dz-reset'),
+    paste: $('.dz-paste'),
+    pasteText: $('.dz-paste textarea'),
+    pasteToggle: $('.dz-paste-toggle'),
+    pasteApply: $('.dz-paste-apply'),
+    pasteCancel: $('.dz-paste-cancel'),
     file: $('.dz-file'),
     filePath: $('.dz-file-path'),
     fileText: $('.dz-file-text'),
@@ -95,6 +100,7 @@
     gateShown = false;
     notice = null;
     finalDoc = 'summary';
+    els.paste.hidden = true;
     render();
   }
 
@@ -173,6 +179,29 @@
     });
     D2S.write(path, text);
     notice = { kind: 'info', text: filled ? t('dzFilled', { n: filled }) : t('dzNothingToFill') };
+    render();
+    if (gateShown) showGaps();
+  }
+
+  /** Fill the current stage's fields from a document written in Claude. */
+  function pasteFromClaude() {
+    var s = state();
+    var path = docPath(s, s.stage);
+    var r = Form.applyDocument(D2S.read(path), lib.getTemplate(s.ctx, s.stage.template), els.pasteText.value, { skip: [approvalKey()] });
+    if (!r.filled.length) {
+      notice = { kind: 'gate', text: t('dzPasteNothing') };
+      drawNotice();
+      return;
+    }
+    D2S.write(path, r.text);
+    els.paste.hidden = true;
+    els.pasteText.value = '';
+    notice = {
+      kind: 'ok',
+      text: t('dzPasteFilled', { fields: r.filled.join(', ') }) +
+        (r.skipped.length ? t('dzPasteSkipped', { fields: r.skipped.join(', ') }) : '') +
+        (r.ignored.length ? t('dzPasteIgnored', { headings: r.ignored.join(', ') }) : ''),
+    };
     render();
     if (gateShown) showGaps();
   }
@@ -280,6 +309,7 @@
       b.setAttribute('aria-pressed', String(b.getAttribute('data-doc') === finalDoc));
     });
     els.actions.hidden = !current || handoff;
+    if (!current || handoff) els.paste.hidden = true;
     form = null;
 
     if (handoff) {
@@ -335,6 +365,13 @@
   });
   els.example.addEventListener('click', useExample);
   els.reset.addEventListener('click', start);
+  els.pasteToggle.addEventListener('click', function () {
+    els.paste.hidden = false;
+    if (els.paste.scrollIntoView) els.paste.scrollIntoView({ block: 'nearest' });
+    els.pasteText.focus();
+  });
+  els.pasteCancel.addEventListener('click', function () { els.paste.hidden = true; });
+  els.pasteApply.addEventListener('click', pasteFromClaude);
   els.toggle.addEventListener('click', function () {
     showFile = !showFile;
     var s = state();

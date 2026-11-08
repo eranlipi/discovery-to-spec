@@ -40,6 +40,7 @@ node /path/to/discovery-to-spec/bin/d2s.js new "Something to explore"
 | `examples/checkout/` | A complete, fictional exploration |
 | `site/` | The website, including the in-browser sandbox (Designer and Developer views) |
 | `figma-plugin/` | The Figma plugin (`npm run plugin`, `npm run plugin:dev`) |
+| `integrations/claude-app/` | The d2s-discovery skill for the Claude app (`npm run claude-skill`) |
 | `test/` | Tests (including a build of the site) |
 
 ## Adding a language

@@ -8,7 +8,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.3.1, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.4.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -48,7 +48,7 @@ npx github:eranlipi/discovery-to-spec init
 node path/to/discovery-to-spec/bin/d2s.js init
 ```
 
-To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.3.1`.
+To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.4.0`.
 
 ## Quick start
 
@@ -131,6 +131,19 @@ The rules live in `.d2s.json`. Teams of two or three set `allowSamePerson` to `t
 Every document is plain Markdown. Designers and product managers can edit files on github.com (the pencil icon), or write in Figma or a doc and have someone paste it in. The `<!-- -->` notes in the templates are guidance and don't count as content. The one rule: keep the `##` headings, because the check looks for them.
 
 The [sandbox on the website](https://discoverytospec.com/#sandbox) opens on a **Designer view**: each stage is a form with one field per `##` heading, the template's note as helper text, and a **Next stage** button that runs the real gate and shows each gap next to its field. It writes the same Markdown the CLI does; **Show the file** reveals it. The [Figma plugin](figma-plugin/README.md) brings the same form into Figma: attach selected frames, pass the gate and save to GitHub without leaving the canvas.
+
+## In the Claude app (no terminal)
+
+Designers and product managers who work in Claude, not in a terminal, can use the **d2s-discovery** skill. Upload it once in Claude (Customize → Skills); a Claude Project works too.
+
+In an ordinary chat, Claude then helps them:
+- frame the problem, pushing back when the request is a solution;
+- turn raw interview notes into insights with evidence and confidence;
+- lay out genuinely different directions;
+- prepare the decision;
+- write the spec.
+
+Each stage ends with a document that has the team's headings. **Paste from Claude** in the Figma plugin or the website sandbox fills the stage's fields from it, and the gate checks it as usual. Setup is in [integrations/claude-app/README.md](integrations/claude-app/README.md). The skill is attached to each release.
 
 ## AI agents
 

@@ -35,7 +35,11 @@ window.D2S_I18N = {
       dzAddPerson: 'להוסיף אדם',
       dzRemove: 'להסיר',
       dzExampleApprovers: 'למלא מאשרים לדוגמה',
-      dzApprovalNote: 'בפרויקט אמיתי כל אחד מאשר מהחשבון שלו. כאן אפשר להקליד כל שם.'
+      dzApprovalNote: 'בפרויקט אמיתי כל אחד מאשר מהחשבון שלו. כאן אפשר להקליד כל שם.',
+      dzPasteFilled: 'מולא מ-Claude: {fields}.',
+      dzPasteIgnored: ' לא נכנסו: {headings}.',
+      dzPasteSkipped: ' את "{fields}" ממלאים אנשים בעצמם.',
+      dzPasteNothing: 'אף כותרת בטקסט לא מתאימה לשדות של השלב הזה. בקשו מ-Claude את המסמך עם הכותרות של השלב.'
     },
     skip: 'דילוג לתוכן',
     'nav.sandbox': 'ארגז חול',
@@ -91,6 +95,11 @@ window.D2S_I18N = {
     'sandbox.docHandoff': 'למפתחים',
     'sandbox.next': 'לשלב הבא',
     'sandbox.example': 'למלא טקסט לדוגמה',
+    'sandbox.paste': 'הדבקה מ-Claude',
+    'sandbox.pasteTitle': 'מדביקים את המסמך ש-Claude כתב לשלב הזה',
+    'sandbox.pasteHint': 'כל כותרת "##" ממלאת את השדה עם אותו שם. שדות בלי כותרת מתאימה נשארים כמו שהם.',
+    'sandbox.pasteApply': 'למלא את השדות',
+    'sandbox.pasteCancel': 'ביטול',
     'sandbox.fileNote': 'זה הקובץ ב-repo. הטופס קורא אותו וכותב אליו.',
     'sandbox.designerNote': 'כל שדה הוא כותרת <code dir="ltr">##</code> בתבנית, וההערה שלה היא טקסט העזרה. <b>למלא טקסט לדוגמה</b> ממלא שדות ריקים בדוגמה. בפרויקט אמיתי הצוות כותב אותם, ואנשים אמיתיים מאשרים.',
     'sandbox.try': 'לנסות',
@@ -187,7 +196,11 @@ window.D2S_I18N = {
       dzAddPerson: 'Add a person',
       dzRemove: 'Remove',
       dzExampleApprovers: 'Use example approvers',
-      dzApprovalNote: 'In a real project, each person approves from their own account. Here you can type any name.'
+      dzApprovalNote: 'In a real project, each person approves from their own account. Here you can type any name.',
+      dzPasteFilled: 'Filled from Claude: {fields}.',
+      dzPasteIgnored: ' Not used: {headings}.',
+      dzPasteSkipped: ' "{fields}" is left for people to fill in.',
+      dzPasteNothing: 'No heading in the text matches this stage’s fields. Ask Claude for the document with the stage’s headings.'
     }
   }
 };

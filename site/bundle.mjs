@@ -41,7 +41,11 @@ export function sandboxScript({ dirs = ['templates', 'integrations'] } = {}) {
     .join(',\n');
   const packaged = {};
   for (const dir of dirs) {
-    for (const rel of walk(path.join(ROOT, dir))) packaged[`${dir}/${rel}`] = read(ROOT, dir, rel);
+    for (const rel of walk(path.join(ROOT, dir))) {
+      // The Claude app skill is packaged on its own (npm run claude-skill); the CLI never reads it.
+      if (dir === 'integrations' && rel.startsWith('claude-app/')) continue;
+      packaged[`${dir}/${rel}`] = read(ROOT, dir, rel);
+    }
   }
   return [
     '(function () {',

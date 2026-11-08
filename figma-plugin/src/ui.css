@@ -76,6 +76,9 @@ details summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
 .attach, .file-link { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 6px; }
 .attach button { align-self: flex-start; }
 .inline { display: flex; gap: 6px; }
+.paste { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-2); }
+.paste textarea { min-height: 120px; font-family: var(--sans); }
+.paste-slot { margin-top: -4px; }
 
 .form .field { padding: 10px 0; border-top: 1px solid var(--line); }
 .form .field:first-child { border-top: 0; padding-top: 0; }
