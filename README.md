@@ -1,6 +1,8 @@
 # discovery-to-spec
 
-**A free, repo-native workflow for design and product teams.** Every feature moves through six short Markdown documents, from the problem to a spec developers (and coding agents) can build from, with a human decision gate in the middle.
+**The approved design decision your coding agent reads.**
+
+A free, repo-native workflow for design and product teams. Every feature moves through six short Markdown documents, from the problem to a spec developers (and coding agents) can build from, with a human decision gate in the middle.
 
 ```
 frame → research → options → decide → spec → handoff
