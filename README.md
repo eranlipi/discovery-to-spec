@@ -8,7 +8,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.3.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.3.1, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -48,7 +48,7 @@ npx github:eranlipi/discovery-to-spec init
 node path/to/discovery-to-spec/bin/d2s.js init
 ```
 
-To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.3.0`.
+To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.3.1`.
 
 ## Quick start
 

@@ -172,7 +172,7 @@
       saveError: 'לא הצלחתי לשמור: {error} השינויים נשמרו במחשב הזה.',
       nothingToSave: 'אין מה לשמור.',
       commitEdit: '{id}: {stage} עודכן על ידי {user} דרך התוסף של d2s',
-      commitNext: '{id}: {from} ← {to} על ידי {user} דרך התוסף של d2s',
+      commitNext: '{id}: {from} → {to} על ידי {user} דרך התוסף של d2s',
       commitNew: '{id}: נפתח על ידי {user} דרך התוסף של d2s',
       someone: 'מעצב/ת',
     },
@@ -501,6 +501,7 @@
   }
 
   function showGaps() {
+    if (!S.gateShown) return; // a late check must not report on a stage that has already passed
     var e = exploration();
     if (!e) return;
     var g = gaps(e);
@@ -510,6 +511,7 @@
   }
 
   function next() {
+    clearTimeout(refs.gateTimer);
     var before = exploration();
     var r = S.d2s.run(['next', before.exp.id]);
     if (r.code !== 0) {

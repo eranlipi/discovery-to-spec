@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 (2026-11-08)
 
+Fixes found while preparing a live demo of the Figma plugin. Download `d2s-figma-plugin-v0.3.1.zip` below to get them in Figma.
+
+- Fixed: clicking Next stage right after typing could show the next stage's empty fields as if the gate had stopped. The late check now stays quiet once the stage has passed, in the website sandbox and in the Figma plugin.
+- Fixed: Hebrew commit messages from the plugin pointed the stage arrow the wrong way.
 - The approval rows in the form explain themselves in plain words, instead of the template's line-format note.
 - The summary for design and product leaves out optional sections that are empty, has no commands in it, and drops the repeated Figma list. Previews show Figma frame links as "Figma · 10-1".
 
