@@ -5,53 +5,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { SITE, ROOT, read, walk, scriptSafe, jsonSafe, pkg, sandboxScript } from './bundle.mjs';
 
-const SITE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(SITE, '..');
 const OUT = path.resolve(process.argv[2] || path.join(SITE, 'dist'));
-
-const read = (...p) => fs.readFileSync(path.join(...p), 'utf8');
-
-function walk(dir, base = dir) {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const full = path.join(dir, e.name);
-    return e.isDirectory() ? walk(full, base) : [path.relative(base, full).split(path.sep).join('/')];
-  });
-}
-
-// Anything inlined into <script> must not open an HTML comment or close the script.
-function scriptSafe(js, label) {
-  const safe = js.replace(/<!--/g, '<\\!--');
-  if (/<\/script/i.test(safe)) throw new Error(`${label} contains "</script"`);
-  return safe;
-}
-const jsonSafe = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
 
 // ---------- the CLI as browser modules ----------
 
-const pkg = JSON.parse(read(ROOT, 'package.json'));
-const modules = ['src/lib.js', 'src/cli.js']
-  .map((rel) => {
-    const src = scriptSafe(read(ROOT, rel), rel);
-    return `${JSON.stringify('/pkg/' + rel)}: function (module, exports, require, __dirname, __filename, process, console) {\n${src}\n}`;
-  })
-  .join(',\n');
-
-const packaged = {};
-for (const dir of ['templates', 'integrations']) {
-  for (const rel of walk(path.join(ROOT, dir))) packaged[`${dir}/${rel}`] = read(ROOT, dir, rel);
-}
-
-const sandbox = [
-  '(function () {',
-  `var BUNDLE = { pkg: ${jsonSafe({ name: pkg.name, version: pkg.version })}, files: ${jsonSafe(packaged)}, modules: {\n${modules}\n} };`,
-  scriptSafe(read(SITE, 'src', 'runtime.js'), 'runtime.js'),
-  '// Each view gets its own in-memory project.',
-  'window.D2S_NEW = function () { return createD2sSandbox(BUNDLE); };',
-  'window.D2S = window.D2S_NEW();',
-  '})();',
-].join('\n');
+const sandbox = sandboxScript();
 
 // ---------- sample text for "fill", "approve" and "Use example text" ----------
 

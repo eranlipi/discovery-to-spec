@@ -41,6 +41,8 @@
   },
   "scripts": {
     "test": "node --test",
-    "site": "node site/build.mjs"
+    "site": "node site/build.mjs",
+    "plugin": "node figma-plugin/build.mjs",
+    "plugin:dev": "node figma-plugin/build.mjs && node figma-plugin/dev/serve.mjs"
   }
 }
