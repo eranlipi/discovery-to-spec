@@ -1,15 +1,19 @@
 # Publishes a GitHub release for the version in package.json, with notes from CHANGELOG.md.
-# Either push a tag (git tag v0.2.0 && git push origin v0.2.0), or run this workflow
-# from the Actions tab on master, which creates the tag as well.
+# It runs on every push to master and does nothing when that version is already released,
+# so releasing is: bump "version" in package.json, add its CHANGELOG.md section, merge.
+# Pushing a v* tag, or running it from the Actions tab, works too.
 name: release
 
 on:
   push:
+    branches: [master]
     tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency: release
 
 jobs:
   release:
@@ -19,18 +23,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm test
       - name: Work out the tag
         id: tag
         run: |
           tag="v$(node -p "require('./package.json').version")"
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
             echo "Tag $GITHUB_REF_NAME does not match package.json ($tag)." >&2
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-      - run: node .github/scripts/release-notes.mjs > notes.md
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "$tag is already released. Nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - if: steps.tag.outputs.skip != 'true'
+        run: npm test
+      - if: steps.tag.outputs.skip != 'true'
+        run: node .github/scripts/release-notes.mjs > notes.md
       - name: Create the release
+        if: steps.tag.outputs.skip != 'true'
         run: gh release create "$TAG" --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"
         env:
           TAG: ${{ steps.tag.outputs.tag }}
