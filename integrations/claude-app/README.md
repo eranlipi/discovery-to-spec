@@ -2,13 +2,15 @@
 
 The d2s assistant brings the d2s method to designers and product managers who work in a chat assistant, not in a terminal. In an ordinary chat, it helps them:
 
-- frame the problem;
+- frame the problem, and where it lives in the product today;
 - turn raw interview notes into insights with evidence;
-- lay out genuinely different directions;
+- lay out genuinely different directions, each with what it changes in the product;
 - prepare the decision;
 - write the spec.
 
 Every stage ends with a short document that has the team's exact headings. In the d2s plugin in Figma, or in the sandbox on the website, **Paste from AI** fills the stage's fields from it. The gate then checks it as usual.
+
+**A discovery session** takes a new request through Frame, Research and Options in one conversation, and ends with one document with a `# Frame`, `# Research` and `# Options` part (in Hebrew `# מסגור`, `# חקר`, `# כיוונים`). Paste from AI fills the stages in turn and runs the gate between them. It stops at Options, which stays open for design to add frames, and never touches Decide.
 
 It follows the same rules as the d2s agent skills: never invent research, quotes, numbers or Figma links, and never fill in "Approved by".
 
@@ -52,11 +54,13 @@ Gemini skills are free on personal Google accounts. Gems are being retired, so u
 
 Just talk. For example:
 
+- "Here's a new request: our manager wants an Apple Pay button on mobile checkout." The assistant offers a discovery session: the problem and where it lives today, the evidence you have, and 2 to 4 directions, in one conversation and one document.
+- Paste your team's `design/context.md` first, so it works from your product, users, design principles and design system.
 - "Let's frame a problem: our manager wants an Apple Pay button on mobile checkout."
 - Paste interview notes, support tickets or data, then ask: "Help me understand what comes out of this."
 - "Here are our insights. Which directions do we have?"
 
-The assistant asks a few questions and then gives the document in a code block. Copy it, open the stage in the d2s plugin in Figma (or in the website sandbox), choose **Paste from AI**, and paste it.
+The assistant asks a few questions and then gives the document in a code block. Copy it, open the exploration in the d2s plugin in Figma (or in the website sandbox), choose **Paste from AI**, and paste it.
 
 ## Build
 
@@ -72,7 +76,9 @@ The build copies `d2s-discovery/SKILL.md` and adds the stage templates, in Engli
 
 ## בעברית: העוזר של d2s ב-Claude, ב-ChatGPT וב-Gemini
 
-**מה זה:** עוזר שעוזר לחשוב לפני שבונים. הוא שואל את השאלות הנכונות, הופך הערות גולמיות מראיונות לתובנות עם ראיות, ופורס כיוונים שונים באמת. בסוף כל שלב הוא נותן מסמך עם הכותרות של הצוות.
+**מה זה:** עוזר שעוזר לחשוב לפני שבונים. הוא שואל את השאלות הנכונות, כולל איפה זה חי היום במוצר, הופך הערות גולמיות מראיונות לתובנות עם ראיות, ופורס כיוונים שונים באמת, כל אחד עם מה שהוא משנה במוצר. בסוף כל שלב הוא נותן מסמך עם הכותרות של הצוות.
+
+**סשן דיסקברי:** מביאים בקשה חדשה, והעוזר מעביר אותה בשיחה אחת דרך המסגור, החקר והכיוונים. בסוף יש מסמך אחד עם "# מסגור", "# חקר" ו-"# כיוונים". הדבקה מ-AI ממלאת את השלבים בזה אחר זה ומריצה את השער ביניהם. הכיוונים נשארים פתוחים לעיצוב, וההחלטה נשארת אצל הצוות.
 
 **התקנה, פעם אחת** (באתר יש את השלבים וכפתור העתקה לכל אחד):
 - **Claude:** מורידים את `d2s-discovery-skill-<version>.zip` מ[דף הגרסאות](https://github.com/eranlipi/discovery-to-spec/releases), בלי לפתוח אותו. ב-Claude: **Customize → Skills**, ואז **+**, **Create skill** ו-**Upload a skill**. צריך שבהגדרות תהיה דלוקה האפשרות ליצור ולערוך קבצים (code execution). אין skills בתוכנית? יוצרים Project ומדביקים את ההנחיות בהוראות שלו.
@@ -80,6 +86,6 @@ The build copies `d2s-discovery/SKILL.md` and adds the stage templates, in Engli
 - **Gemini:** בסרגל הצד **Skills** ← **Create** ← **Create manually**. השם `d2s-discovery`, ומדביקים את התיאור ואת ההנחיות. בצ׳אט מקלידים `/` ובוחרים אותו.
 
 **שימוש:**
-- **מדברים רגיל:** "בוא נמסגר בעיה…", או מדביקים הערות מראיונות ושואלים "מה יוצא מזה?".
+- **מדברים רגיל:** "יש בקשה חדשה…" (והעוזר מציע סשן דיסקברי), "בוא נמסגר בעיה…", או מדביקים הערות מראיונות ושואלים "מה יוצא מזה?". כדאי להדביק קודם את `design/context.md`.
 - **בסוף:** מעתיקים את המסמך, ובתוסף של d2s ב-Figma (או באתר) בוחרים **הדבקה מ-AI** ומדביקים. השדות מתמלאים לבד.
 - **העוזר לא ממציא:** לא מחקר ולא ציטוטים. הוא גם לא ממלא את "מי אישר", כי רק אנשים מאשרים.

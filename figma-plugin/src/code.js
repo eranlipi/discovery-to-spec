@@ -33,6 +33,7 @@ async function handle(msg) {
         linked: linked(),
         settings: (await figma.clientStorage.getAsync('d2s-settings')) || null,
         drafts: (await figma.clientStorage.getAsync('d2s-drafts')) || {},
+        pending: (await figma.clientStorage.getAsync('d2s-pending')) || {},
         selection: selection(),
       };
     case 'store':

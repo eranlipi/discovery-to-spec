@@ -3,6 +3,7 @@
 Design and product work lives in `{{dir}}/explorations/<id>/`, one folder per feature, and moves through six stages: frame → research → options → decide → spec → handoff. Each stage has one document; `{{dir}}/README.md` explains the process.
 
 Rules for AI agents:
+- Read `{{dir}}/context.md` (the product, its users, design principles and design system) for every feature, and prefer the design system's existing components over new ones.
 - Write documents in the language set in `.d2s.json` (`lang`) and keep the `##` headings unchanged.
 - Never invent user research, quotes, numbers or Figma links. Record unknowns as open questions.
 - Never fill in the "approved by" section of `decision.md`. Only people approve decisions. The gate expects one line per person (`name, role, date`, optionally `@github-handle`) and rejects placeholders and AI tool names.

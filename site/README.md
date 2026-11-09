@@ -16,7 +16,7 @@ The project website: one static page, English by default with a Hebrew option, a
 | `src/styles.css` | Styles, light and dark themes, right-to-left support |
 | `src/app.js` | Theme and language switching, tabs, the Developer view |
 | `src/designer.js` | The Designer view: stage rail, gate, approvals, handoff preview |
-| `src/stage-form.js` | The stage form, shared with the planned Figma plugin: Markdown to fields and back, plus a small Markdown preview |
+| `src/stage-form.js` | The stage form, shared with the Figma plugin: Markdown to fields and back, Paste from AI (one stage, or a discovery session through the gate), plus a small Markdown preview |
 | `src/runtime.js` | The in-browser runtime for the CLI |
 | `public/` | Copied as is: `_headers`, `favicon.svg`, `robots.txt` |
 

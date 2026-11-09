@@ -22,6 +22,7 @@
   var finalDoc = 'summary'; // at the last stage: summary.md (design and product) or handoff.md (developers)
   var form = null;
   var revalidate = null;
+  var pending = []; // parts of a pasted discovery session waiting for their stage: [{ stage, text }]
 
   var $ = function (sel) { return rootEl.querySelector(sel); };
   var els = {
@@ -31,6 +32,7 @@
     step: $('.dz-step'),
     intro: $('.dz-intro'),
     notice: $('.dz-notice'),
+    pending: $('.dz-pending'),
     form: $('.dz-form'),
     preview: $('.dz-preview'),
     docs: $('.dz-docs'),
@@ -99,6 +101,7 @@
     view = null;
     gateShown = false;
     notice = null;
+    pending = [];
     finalDoc = 'summary';
     els.paste.hidden = true;
     render();
@@ -183,8 +186,21 @@
     if (gateShown) showGaps();
   }
 
+  /** Stage names, as the rail shows them: "Frame and Research", "מסגור וחקר". */
+  function stageList(ids) {
+    var names = ids.map(function (id) { return t('dzStages')[lib.stageIndex(id)]; });
+    if (names.length < 2) return names.join('');
+    var last = names.pop();
+    return names.join(', ') + (lang === 'he' ? ' ו' : ' and ') + last;
+  }
+
   /** Fill the current stage's fields from a document written with an AI assistant. */
-  function pasteFromClaude() {
+  function pasteFromAI() {
+    var parts = Form.splitStages(els.pasteText.value);
+    if (parts) {
+      pasteSession(parts);
+      return;
+    }
     var s = state();
     var path = docPath(s, s.stage);
     var r = Form.applyDocument(D2S.read(path), lib.getTemplate(s.ctx, s.stage.template), els.pasteText.value, { skip: [approvalKey()] });
@@ -204,6 +220,89 @@
     };
     render();
     if (gateShown) showGaps();
+  }
+
+  /**
+   * A discovery session's document: from the current stage, each stage is filled and goes
+   * through the real gate, up to Options, which stays open. What can't be used yet is kept.
+   */
+  function pasteSession(parts) {
+    clearTimeout(revalidate);
+    // Parts kept from an earlier paste still count, unless this one has a newer part for their stage.
+    var stages = parts.map(function (p) { return p.stage; });
+    parts = parts.concat(pending.filter(function (p) { return stages.indexOf(p.stage) < 0; }));
+    var r = Form.applySession(D2S, state().exp.id, parts, { skip: [approvalKey()] });
+    pending = r.pending;
+    els.paste.hidden = true;
+    els.pasteText.value = '';
+    view = null;
+    gateShown = !!r.stopped;
+    notice = sessionNotice(r, state());
+    render();
+    els.notice.focus();
+  }
+
+  function sessionNotice(r, s) {
+    var name = function (id) { return t('dzStages')[lib.stageIndex(id)]; };
+    var passed = r.steps.filter(function (x) { return x.passed; }).map(function (x) { return x.stage; });
+    var lastStep = r.steps[r.steps.length - 1];
+    var n = { kind: 'ok', text: passed.length ? t('dzSessionPassed', { stages: stageList(passed) }) + ' ' : '' };
+    if (r.stopped) {
+      n.kind = 'gate';
+      n.text += t('dzSessionStopped', { stage: name(r.stopped) });
+      n.items = gaps(s).list;
+      // Blocked by something outside this stage's fields: show what d2s printed.
+      if (!n.items.length) n.items = r.gate.filter(function (l) { return /^\s+\S/.test(l); }).map(function (l) { return { key: null, text: l.trim() }; });
+    } else if (lastStep && lastStep.stage === 'options') n.text += t('dzSessionOptions');
+    else if (r.steps.length) n.text += t('dzSessionNext', { stage: name(r.to) });
+    else {
+      n.kind = 'gate';
+      n.text = t('dzSessionNothing', { stage: name(r.to) });
+    }
+    var notes = [];
+    var used = function (why) { return r.unused.filter(function (u) { return u.why === why; }).map(function (u) { return u.stage; }); };
+    if (used('passed').length) notes.push(t('dzSessionUnusedPassed', { stages: stageList(used('passed')) }));
+    if (used('team').length) notes.push(t('dzSessionUnusedTeam', { stages: stageList(used('team')) }));
+    var ignored = [];
+    r.steps.forEach(function (x) { ignored = ignored.concat(x.ignored); });
+    if (ignored.length) notes.push(t('dzPasteIgnored', { headings: ignored.join(', ') }).trim());
+    if (notes.length) n.note = notes.join(' ');
+    return n;
+  }
+
+  /** What's left of a pasted session: waiting for the gate, or ready to fill now. */
+  function drawPending(s, current) {
+    // A part for a stage that has already passed can't be used anymore.
+    pending = pending.filter(function (p) { return lib.stageIndex(p.stage) >= s.index; });
+    els.pending.innerHTML = '';
+    els.pending.hidden = !pending.length || !current;
+    if (els.pending.hidden) return;
+    var ids = pending.map(function (p) { return p.stage; });
+    var ready = ids.some(function (id) { return lib.stageIndex(id) === s.index; });
+    var p = document.createElement('p');
+    p.textContent = ready ? t('dzPendingReady', { stages: stageList(ids) })
+      : t(ids.length > 1 ? 'dzPendingMany' : 'dzPendingOne', { stages: stageList(ids), stage: t('dzStages')[s.index] });
+    els.pending.appendChild(p);
+    var actions = document.createElement('div');
+    actions.className = 'dz-pending-actions';
+    if (ready) {
+      var fill = document.createElement('button');
+      fill.type = 'button';
+      fill.className = 'btn primary';
+      fill.textContent = t('dzPendingFill', { stages: stageList(ids) });
+      fill.addEventListener('click', function () { pasteSession(pending.slice()); });
+      actions.appendChild(fill);
+    }
+    var discard = document.createElement('button');
+    discard.type = 'button';
+    discard.className = 'btn';
+    discard.textContent = t('dzPendingDiscard');
+    discard.addEventListener('click', function () {
+      pending = [];
+      render();
+    });
+    actions.appendChild(discard);
+    els.pending.appendChild(actions);
   }
 
   // ---------- drawing ----------
@@ -268,6 +367,12 @@
         ul.appendChild(li);
       });
       els.notice.appendChild(ul);
+    }
+    if (n.note) {
+      var note = document.createElement('p');
+      note.className = 'dz-notice-note';
+      note.textContent = n.note;
+      els.notice.appendChild(note);
     }
   }
 
@@ -351,6 +456,7 @@
       if (gateShown && current) form.setIssues(gaps(s).byKey);
     }
     drawNotice();
+    drawPending(s, current && !handoff);
     drawFile(path);
   }
 
@@ -371,7 +477,7 @@
     els.pasteText.focus();
   });
   els.pasteCancel.addEventListener('click', function () { els.paste.hidden = true; });
-  els.pasteApply.addEventListener('click', pasteFromClaude);
+  els.pasteApply.addEventListener('click', pasteFromAI);
   els.toggle.addEventListener('click', function () {
     showFile = !showFile;
     var s = state();

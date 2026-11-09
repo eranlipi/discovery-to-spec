@@ -7,7 +7,7 @@ description: Stage 2 (research) of a discovery-to-spec design exploration. Synth
 
 Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status` and ask which one.
 
-1. Read `.d2s.json` and write in its `lang`. Read the exploration's `brief.md` first, because the research serves that problem.
+1. Read `.d2s.json` and write in its `lang`. Read `{{dir}}/context.md` and the exploration's `brief.md` first, because the research serves that problem.
 2. Open `{{dir}}/explorations/<id>/insights.md`. If it doesn't exist, the brief hasn't passed its gate yet; run `{{cli}} status <id>` and tell the user.
 3. Ask for the raw material: pasted notes, files in the repo, or exported data. Read all of it before writing anything.
 4. Write at most 5 insights. For each one give what was learned, the supporting evidence (a direct quote or a number, with its source), and a confidence level (high, medium or low) that reflects how much evidence there is.

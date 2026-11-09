@@ -7,6 +7,7 @@ const lib = require('./lib.js');
 const { STAGES, KEY_SECTIONS, UserError } = lib;
 const VERSION = require('../package.json').version;
 const TEMPLATE_NAMES = ['brief', 'insights', 'options', 'decision', 'spec', 'handoff', 'summary'];
+const STAGE_TEMPLATES = STAGES.filter((s) => s.id !== 'handoff').map((s) => s.template);
 const AGENTS = ['claude', 'cursor', 'agents-md'];
 const REMOTE_CLI = 'npx github:eranlipi/discovery-to-spec';
 
@@ -76,7 +77,7 @@ function init(flags) {
   const root = process.cwd();
   const cfgPath = path.join(root, lib.CONFIG_FILE);
   if (lib.exists(cfgPath) && !flags.force) {
-    throw new UserError(`Already initialized (${lib.CONFIG_FILE} exists). Use --force to refresh the agent files.`);
+    throw new UserError(`Already initialized (${lib.CONFIG_FILE} exists). Use --force to refresh the agent files and the templates you haven't changed.`);
   }
   // --force keeps the existing settings unless a flag changes them.
   let existing = {};
@@ -105,12 +106,25 @@ function init(flags) {
   const put = (rel, text, force = false) => results.push([lib.writeFileSafe(path.join(root, rel), text, force), rel]);
   const pkg = (rel) => lib.readText(path.join(lib.PKG_ROOT, rel));
 
-  // Design folder
-  put(`${dir}/README.md`, lib.render(lib.packagedTemplate(lang, 'readme'), vars));
-  put(`${dir}/context.md`, lib.render(lib.packagedTemplate(lang, 'context'), vars));
+  // Design folder. With --force, a file the team never changed is refreshed; one they changed is kept.
+  const designFile = (rel, name, text, renderedWith) => {
+    const file = path.join(root, rel);
+    if (!lib.exists(file)) return put(rel, text);
+    const mine = lib.readText(file);
+    if (!flags.force || lib.fingerprint(mine) === lib.fingerprint(text)) return results.push(['kept', rel]);
+    // README.md was rendered with the command of its day: put the placeholder back to recognize it.
+    const raw = renderedWith ? mine.split(renderedWith).join('{{cli}}') : mine;
+    if (lib.isShipped(lang, name, raw)) {
+      lib.writeText(file, text);
+      return results.push(['updated', rel]);
+    }
+    results.push(['kept', rel, STAGE_TEMPLATES.includes(name) ? templateNews(mine, text) : '']);
+  };
+  designFile(`${dir}/README.md`, 'readme', lib.render(lib.packagedTemplate(lang, 'readme'), vars), existing.cli);
+  designFile(`${dir}/context.md`, 'context', lib.render(lib.packagedTemplate(lang, 'context'), vars));
   put(`${dir}/decisions.md`, lib.render(lib.packagedTemplate(lang, 'decisions'), vars));
   put(`${dir}/explorations/.gitkeep`, '');
-  for (const name of TEMPLATE_NAMES) put(`${dir}/templates/${name}.md`, lib.packagedTemplate(lang, name));
+  for (const name of TEMPLATE_NAMES) designFile(`${dir}/templates/${name}.md`, name, lib.packagedTemplate(lang, name));
 
   // Agent integrations (ours to manage: refreshed with --force)
   const skillsDir = path.join(lib.PKG_ROOT, 'integrations', 'skills');
@@ -133,12 +147,27 @@ function init(flags) {
   results.push([flags.force ? 'updated' : 'created', lib.CONFIG_FILE]);
 
   log(c.bold(`discovery-to-spec initialized (${lang === 'he' ? 'Hebrew' : 'English'} templates)\n`));
-  for (const [state, rel] of results) {
+  for (const [state, rel, note] of results) {
     const label = state === 'kept' ? c.dim('kept   ') : state === 'updated' ? c.yellow('updated') : c.green('created');
-    log(`  ${label} ${rel}`);
+    log(`  ${label} ${rel}${note ? c.yellow(`  (${note})`) : ''}`);
+  }
+  if (results.some((r) => r[2])) {
+    log(`\nYour own templates were kept. Add the new sections to them by hand, or delete a template and run "${cli} init --force" again to get the new one.`);
   }
   log(`\nNext:\n  ${cli} new "Short name of the problem"\n  Then fill ${dir}/explorations/<id>/brief.md (or run /d2s-frame in Claude Code or Cursor).`);
   return 0;
+}
+
+/** What a newer packaged template asks for that the team's own version doesn't: new or newly required sections. */
+function templateNews(mine, packaged) {
+  const ours = lib.parseSections(lib.parseFrontMatter(mine).body);
+  const required = lib.parseSections(lib.parseFrontMatter(packaged).body).filter((s) => !s.optional);
+  if (!required.some((t) => lib.findSection(ours, t.heading))) return ''; // another template altogether, e.g. another language
+  const added = required.filter((t) => !lib.findSection(ours, t.heading));
+  const nowRequired = required.filter((t) => (lib.findSection(ours, t.heading) || {}).optional);
+  const quote = (list) => list.map((t) => `"${t.heading}"`).join(', ');
+  const news = [added.length && `adds ${quote(added)}`, nowRequired.length && `requires ${quote(nowRequired)}`].filter(Boolean);
+  return news.length ? `your own version; the new template ${news.join(' and ')}` : '';
 }
 
 function upsertAgentsMd(root, block) {
@@ -459,6 +488,7 @@ function writeSummary(ctx, exp, docs, handoffVars) {
     ...handoffVars,
     problem: get(brief, 'problem') || none,
     who: get(brief, 'who') || none,
+    where: get(brief, 'where') || none,
     outcome: get(brief, 'outcome') || none,
     appetite: get(brief, 'appetite') || none,
     noGos: get(brief, 'noGos'),
@@ -548,8 +578,9 @@ Usage: d2s <command> [options]
       --cli "<command>"   How docs and skills call this tool (default: "npx d2s" when
                           installed in the project, otherwise ${REMOTE_CLI})
       --ci                Add a GitHub Actions check for pull requests
-      --force             Refresh agent files and config in an initialized repo,
-                          keeping its language, folder, command and approval rules
+      --force             Refresh an initialized repo: agent files, config, and the
+                          templates you haven't changed. Keeps the language, folder,
+                          command, approval rules and your own templates
   new "<title>"         Start an exploration (stage 1: frame)
       --slug <name>       Folder name (latin letters)
       --owner <name>      Who leads it

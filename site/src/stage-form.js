@@ -4,8 +4,9 @@
  * and "(optional)" becomes a badge. The Markdown file stays the source of truth:
  * the form reads it and writes it back.
  *
- * Shared by the website's Designer view and meant for the Figma plugin, whose UI
- * is a web page too. Model functions are pure; render() needs a DOM.
+ * Shared by the website's Designer view and the Figma plugin, whose UI is a web
+ * page too. Model functions are pure, except applySession(), which drives an
+ * in-memory d2s through the real gate; render() needs a DOM.
  */
 (function (root) {
   'use strict';
@@ -115,6 +116,17 @@
   }
 
   /**
+   * The document in a pasted text. A whole chat reply may be pasted: use the code block that
+   * holds the document, if there is one, and drop the "paste it in d2s" line the assistant adds.
+   */
+  function documentOf(pasted) {
+    var src = String(pasted || '').replace(/\r\n/g, '\n').trim();
+    var fence = /(^|\n)(```|~~~)[^\n]*\n([\s\S]*?)\n\2[ \t]*(?=\n|$)/.exec(src);
+    if (fence && /^##\s/m.test(fence[3])) src = fence[3];
+    return src.split('\n').filter(function (line) { return !/Paste from (?:AI|Claude)|הדבקה מ-(?:AI|Claude)/.test(line); }).join('\n');
+  }
+
+  /**
    * Fill fields from a pasted document, such as one written with an AI assistant: every
    * "## " section whose heading matches a field replaces that field's text.
    * Fields whose keys are in opts.skip are left alone and listed in `skipped`.
@@ -123,12 +135,7 @@
   function applyDocument(docText, templateText, pasted, opts) {
     var skip = (opts && opts.skip) || [];
     var skipped = [];
-    var src = String(pasted || '').replace(/\r\n/g, '\n').trim();
-    // A whole chat reply may be pasted: use the code block that holds the document, if there is one,
-    // and drop the "paste it in d2s" line that the assistant adds.
-    var fence = /(^|\n)(```|~~~)[^\n]*\n([\s\S]*?)\n\2[ \t]*(?=\n|$)/.exec(src);
-    if (fence && /^##\s/m.test(fence[3])) src = fence[3];
-    src = src.split('\n').filter(function (line) { return !/Paste from (?:AI|Claude)|הדבקה מ-(?:AI|Claude)/.test(line); }).join('\n');
+    var src = documentOf(pasted);
     var fields = {};
     model(docText, templateText).fields.forEach(function (f) { fields[f.key] = f; });
     var text = docText;
@@ -146,6 +153,129 @@
       }
     });
     return { text: text, filled: filled, ignored: ignored, skipped: skipped };
+  }
+
+  // ---------- a document for several stages, from a discovery session ----------
+
+  // What a "# " heading may call each stage, in English and in Hebrew: the forms' stage names
+  // first, then the documents' names.
+  var STAGE_NAMES = {
+    frame: ['frame', 'מסגור', 'brief', 'דף פתיחה'],
+    research: ['research', 'חקר', 'insights', 'תובנות', 'מחקר'],
+    options: ['options', 'כיוונים', 'directions'],
+    decide: ['decide', 'החלטה', 'decision'],
+    spec: ['spec', 'מפרט', 'specification'],
+    handoff: ['handoff', 'העברה', 'העברה לפיתוח'],
+  };
+  // A session drafts up to Options. Decide is the team's.
+  var SESSION_LAST = 'options';
+
+  /** The stage a "# " heading names: "Frame", "2. Research", "Stage 3 · Options", "כיוונים". Otherwise null. */
+  function stageOfHeading(heading) {
+    var name = String(heading)
+      .replace(/[*_`]/g, '')
+      .replace(/^(?:(?:stage|שלב)\s*)?\d*\s*[.:)·–—-]?\s*/i, '')
+      .replace(/\s*\([^)]*\)\s*$/, '')
+      .replace(/[\s:.]+$/, '')
+      .toLowerCase();
+    var ids = Object.keys(STAGE_NAMES);
+    for (var i = 0; i < ids.length; i++) if (STAGE_NAMES[ids[i]].indexOf(name) >= 0) return ids[i];
+    return null;
+  }
+
+  /**
+   * Split a document written for several stages at once, as a discovery session ends:
+   * "# Frame", "# Research" and "# Options" (in Hebrew "# מסגור", "# חקר", "# כיוונים"), each
+   * followed by that stage's "## " sections. Returns [{ stage, text }] in the order pasted, or
+   * null when the text names no stage: a document for one stage, pasted as before.
+   */
+  function splitStages(pasted) {
+    var parts = [];
+    var current = null;
+    var fence = false;
+    documentOf(pasted).split('\n').forEach(function (line) {
+      if (/^\s*(```|~~~)/.test(line)) fence = !fence;
+      var m = fence ? null : /^#\s+(.+?)\s*#*\s*$/.exec(line);
+      var stage = m ? stageOfHeading(m[1]) : null;
+      if (stage) {
+        current = { stage: stage, lines: [] };
+        parts.push(current);
+      } else if (current) current.lines.push(line);
+    });
+    if (!parts.length) return null;
+    return parts.map(function (p) { return { stage: p.stage, text: p.lines.join('\n').trim() }; });
+  }
+
+  /**
+   * Paste a discovery session's document into an exploration. From its current stage: fill the
+   * stage, run the real gate (d2s next), and go on to the next stage while the gate passes.
+   * Options is filled but never passed, so design can add frames and review it; Decide and the
+   * stages after it are never filled. A part that can't be used yet comes back in `pending`.
+   *
+   * d2s: an in-memory d2s ({ lib, path, cwd, read, write, run }). id: the exploration's id.
+   * parts: from splitStages(). opts.skip: field keys to leave alone, as in applyDocument.
+   * Returns {
+   *   from, to: the stage before and after,
+   *   steps: [{ stage, filled, ignored, skipped, passed }], one per stage that was filled,
+   *   stopped: the stage whose gate stopped the paste, or null, and gate: what d2s printed,
+   *   pending: [{ stage, text }], parts for later stages, kept until their stage comes,
+   *   unused: [{ stage, why }], parts for stages already passed ('passed') or for the team ('team'),
+   * }
+   */
+  function applySession(d2s, id, parts, opts) {
+    var lib = d2s.lib;
+    var last = lib.stageIndex(SESSION_LAST);
+    var texts = {};
+    var order = [];
+    parts.forEach(function (p) {
+      if (!Object.prototype.hasOwnProperty.call(texts, p.stage)) {
+        texts[p.stage] = '';
+        order.push(p.stage);
+      }
+      texts[p.stage] += (texts[p.stage] ? '\n\n' : '') + p.text;
+    });
+    function at() {
+      var ctx = lib.loadContext(d2s.cwd);
+      var exp = lib.listExplorations(ctx).filter(function (e) { return e.id === id; })[0];
+      var index = lib.stageIndex(exp.stage);
+      var stage = lib.STAGES[index];
+      var path = d2s.path.relative(d2s.cwd, d2s.path.join(exp.dir, stage.file));
+      return { ctx: ctx, index: index, stage: stage, path: path };
+    }
+    var s = at();
+    var result = { from: s.stage.id, to: s.stage.id, steps: [], stopped: null, gate: [], pending: [], unused: [] };
+    order.forEach(function (stage) {
+      var i = lib.stageIndex(stage);
+      if (i < s.index) result.unused.push({ stage: stage, why: 'passed' });
+      else if (i > last) result.unused.push({ stage: stage, why: 'team' });
+    });
+    while (s.index <= last && Object.prototype.hasOwnProperty.call(texts, s.stage.id)) {
+      var r = applyDocument(d2s.read(s.path), lib.getTemplate(s.ctx, s.stage.template), texts[s.stage.id], opts);
+      d2s.write(s.path, r.text);
+      delete texts[s.stage.id];
+      var step = { stage: s.stage.id, filled: r.filled, ignored: r.ignored, skipped: r.skipped, passed: false };
+      result.steps.push(step);
+      if (s.index === last) break; // Options waits for design and review
+      var gate = d2s.run(['next', id]);
+      if (gate.code !== 0) {
+        result.stopped = s.stage.id;
+        result.gate = Array.prototype.slice.call(gate.lines);
+        break;
+      }
+      step.passed = true;
+      s = at();
+    }
+    result.to = s.stage.id;
+    order.forEach(function (stage) {
+      var i = lib.stageIndex(stage);
+      if (Object.prototype.hasOwnProperty.call(texts, stage) && i > s.index && i <= last) {
+        result.pending.push({ stage: stage, text: texts[stage] });
+      }
+    });
+    var byStage = function (a, b) { return lib.stageIndex(a.stage) - lib.stageIndex(b.stage); };
+    result.pending.sort(byStage);
+    result.unused.sort(byStage);
+    return result;
   }
 
   // ---------- a small Markdown renderer, for previews ----------
@@ -468,7 +598,17 @@
     };
   }
 
-  var api = { model: model, setField: setField, applyDocument: applyDocument, keyOf: keyOf, labelOf: labelOf, markdown: markdown, render: render };
+  var api = {
+    model: model,
+    setField: setField,
+    applyDocument: applyDocument,
+    splitStages: splitStages,
+    applySession: applySession,
+    keyOf: keyOf,
+    labelOf: labelOf,
+    markdown: markdown,
+    render: render,
+  };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.D2SForm = api;
 })(typeof window !== 'undefined' ? window : this);

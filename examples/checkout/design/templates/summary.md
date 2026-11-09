@@ -13,6 +13,9 @@ generated: {{date}}
 ## Who it matters to
 {{who}}
 
+## Where it lives today
+{{where}}
+
 ## Desired outcome
 {{outcome}}
 

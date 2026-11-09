@@ -13,6 +13,9 @@ Fictional example. About 40% of users who reach checkout on mobile don't complet
 ## Who it matters to
 Returning customers who order from their phone, usually during a short break or on the go.
 
+## Where it lives today
+Fictional example. On mobile, checkout is the desktop form made smaller. After the cart come two long screens, Shipping details (https://www.figma.com/design/EXAMPLE/Checkout?node-id=2-1) and Payment (https://www.figma.com/design/EXAMPLE/Checkout?node-id=2-2), then Order confirmation. Customers type every field on each order, and a declined card shows "Payment failed" with no reason.
+
 ## Desired outcome
 More completed mobile orders, and fewer support tickets saying "the payment didn't go through".
 

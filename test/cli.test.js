@@ -45,6 +45,30 @@ function setSection(file, heading, text) {
 const exp = (repo, id, file) => path.join(repo, 'design', 'explorations', id, file);
 const read = (...p) => fs.readFileSync(path.join(...p), 'utf8');
 
+/**
+ * A template as d2s 0.5.0 shipped it, rebuilt from today's: the brief without "Where it lives
+ * today", the spec with "Existing components (optional)". Checked against the shipped fingerprints.
+ */
+function template05(lang, name) {
+  const now = lib.packagedTemplate(lang, name);
+  const old = {
+    brief: () => now.replace(/^## (Where it lives today|איפה זה חי היום)\n<!--[^\n]*-->\n\n/m, ''),
+    spec: () =>
+      now
+        .replace(/^## Existing components\n<!--[^\n]*-->/m, '## Existing components (optional)\n<!-- Which design system components are used, and what is new. -->')
+        .replace(/^## רכיבים קיימים\n<!--[^\n]*-->/m, '## רכיבים קיימים (אופציונלי)\n<!-- אילו רכיבים מספריית העיצוב משתמשים בהם, ומה חדש. -->'),
+    readme: () =>
+      now
+        .replace('who it matters to, where it lives in the product today, desired outcome', 'who it matters to, desired outcome')
+        .replace('pros and cons, and what each changes in the product |', 'pros and cons |')
+        .replace('edge cases, acceptance criteria and the components used |', 'edge cases and acceptance criteria |')
+        .replace('design principles and design system. The AI assistant and agents read it for every feature.', 'design principles.'),
+  }[name]();
+  assert.notEqual(old, now);
+  assert.ok(lib.isShipped(lang, name, old), `the rebuilt ${lang}/${name} is the one 0.5.0 shipped`);
+  return old;
+}
+
 test('init creates the design folder, skills, AGENTS.md and config', () => {
   const repo = tmpRepo();
   const r = run(repo, 'init');
@@ -165,7 +189,11 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   assert.equal(r.code, 1, 'an empty brief cannot pass');
   assert.match(r.out, /section "Problem" is empty/);
 
-  fill(exp(repo, id, 'brief.md'), { Problem: 'Mobile users abandon checkout.', 'Open questions': 'Does it happen on desktop too?' });
+  fill(exp(repo, id, 'brief.md'), {
+    Problem: 'Mobile users abandon checkout.',
+    'Where it lives today': 'Two checkout screens: https://www.figma.com/design/abc/Checkout?node-id=2-1',
+    'Open questions': 'Does it happen on desktop too?',
+  });
   assert.equal(run(repo, 'next', id).code, 0);
   assert.ok(fs.existsSync(exp(repo, id, 'insights.md')));
 
@@ -221,7 +249,11 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   );
   assert.doesNotMatch(log, /figma\.com/, 'links are kept out of the log');
 
-  fill(exp(repo, id, 'spec.md'), { 'Acceptance criteria': 'Given a full cart, When the user taps "Pay", Then one page opens.' });
+  fill(exp(repo, id, 'spec.md'), { 'Acceptance criteria': 'Given a full cart, When the user taps "Pay", Then one page opens.', 'Existing components': '' });
+  r = run(repo, 'next', id);
+  assert.equal(r.code, 1, 'the spec names the components it uses');
+  assert.match(r.out, /section "Existing components" is empty/);
+  setSection(exp(repo, id, 'spec.md'), 'Existing components', 'Form fields and the primary button from the design system. No new components.');
   r = run(repo, 'next', id);
   assert.equal(r.code, 0, r.out);
 
@@ -236,6 +268,8 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   const summary = read(exp(repo, id, 'summary.md'));
   assert.match(summary, /^# Mobile checkout drop-off: summary$/m, 'a summary for design and product comes with the handoff');
   assert.match(summary, /## The problem\nMobile users abandon checkout\./);
+  assert.match(summary, /## Where it lives today\nTwo checkout screens: https:\/\/www\.figma\.com\/design\/abc\/Checkout\?node-id=2-1/);
+  assert.doesNotMatch(handoff, /node-id=2-1/, "the handoff's links come from the decision and the spec only");
   assert.match(summary, /## What we decided\nOne-page checkout\./);
   assert.match(summary, /## Approved by\n- Dana Levi, product, 2026-11-20, @danalevi\n- Yossi Bar, design lead/);
   assert.match(summary, /## Open questions\nDoes it happen on desktop too\?/);
@@ -261,6 +295,130 @@ test('full flow: the gate blocks incomplete stages and the handoff collects the 
   assert.match(run(repo, 'status', '--all').out, /archived/);
   run(repo, 'new', 'Next one');
   assert.ok(fs.existsSync(exp(repo, '002-next-one', 'brief.md')), 'numbering continues after archive');
+});
+
+test('a new brief needs "Where it lives today" to pass the gate; a brand-new area says so', () => {
+  const repo = tmpRepo();
+  run(repo, 'init');
+  run(repo, 'new', 'Saved cards', '--slug', 'cards');
+  fill(exp(repo, '001-cards', 'brief.md'), { 'Where it lives today': '' });
+  let r = run(repo, 'next', '1');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /section "Where it lives today" is empty/, 'the gate names the section');
+  setSection(exp(repo, '001-cards', 'brief.md'), 'Where it lives today', 'New area, nothing exists yet.');
+  r = run(repo, 'next', '1');
+  assert.equal(r.code, 0, r.out);
+
+  const he = tmpRepo();
+  run(he, 'init', '--lang', 'he');
+  run(he, 'new', 'שמירת כרטיס', '--slug', 'cards');
+  fill(exp(he, '001-cards', 'brief.md'), { 'איפה זה חי היום': '' });
+  r = run(he, 'next', '1');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /section "איפה זה חי היום" is empty/);
+  setSection(exp(he, '001-cards', 'brief.md'), 'איפה זה חי היום', 'אזור חדש, עדיין אין כלום.');
+  assert.equal(run(he, 'next', '1').code, 0);
+});
+
+test('after init --force, stages that passed before 0.6.0 only warn about the new sections', () => {
+  const repo = tmpRepo();
+  run(repo, 'init');
+  // A repository set up with 0.5.0: its copies of the brief and spec templates predate the new sections.
+  const tpl = (name) => path.join(repo, 'design', 'templates', `${name}.md`);
+  fs.writeFileSync(tpl('brief'), template05('en', 'brief'));
+  fs.writeFileSync(tpl('spec'), template05('en', 'spec'));
+
+  // One exploration went all the way through with them; another is still being framed.
+  run(repo, 'new', 'Old checkout', '--slug', 'old');
+  const approvals = '- Dana Levi, product, 2026-11-20\n- Yossi Bar, design, 2026-11-20\n- Ron Tal, engineering, 2026-11-21';
+  for (const f of ['brief.md', 'insights.md', 'options.md', 'decision.md', 'spec.md']) {
+    fill(exp(repo, '001-old', f), { 'Approved by': approvals, 'Existing components': '', 'Acceptance criteria': 'Given a cart, When paying, Then one page opens.' });
+    assert.equal(run(repo, 'next', 'old').code, 0, f);
+  }
+  run(repo, 'new', 'Old search', '--slug', 'search');
+  assert.doesNotMatch(read(exp(repo, '002-search', 'brief.md')), /Where it lives today/);
+
+  // The upgrade: init --force refreshes the templates nobody changed.
+  const upgrade = run(repo, 'init', '--force');
+  assert.equal(upgrade.code, 0, upgrade.out);
+  assert.match(upgrade.out, /updated design\/templates\/brief\.md/);
+  assert.match(upgrade.out, /updated design\/templates\/spec\.md/);
+  assert.match(read(tpl('brief')), /^## Where it lives today$/m);
+
+  // Given a brief that passed Frame before the upgrade, the missing section is a warning, not an error.
+  let r = run(repo, 'check');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /warn .*001-old\/brief\.md: missing section "Where it lives today" \(required since d2s 0\.6\.0, after this stage passed/);
+  assert.match(r.out, /warn .*001-old\/spec\.md: section "Existing components" is empty \(required since d2s 0\.6\.0/);
+  assert.doesNotMatch(r.out, /error/);
+  assert.equal(run(repo, 'check', 'old', '--strict').code, 0, '--strict is about the current stage, not the ones that passed');
+
+  // The stage an exploration is at is held to the new template.
+  fill(exp(repo, '002-search', 'brief.md'));
+  r = run(repo, 'next', 'search');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /missing section "Where it lives today"/);
+  fs.appendFileSync(exp(repo, '002-search', 'brief.md'), '\n## Where it lives today\nSearch results page.\n');
+  assert.equal(run(repo, 'next', 'search').code, 0);
+
+  // A brief made from the new template stays held to it once it has passed.
+  run(repo, 'new', 'New one', '--slug', 'new');
+  fill(exp(repo, '003-new', 'brief.md'));
+  assert.equal(run(repo, 'next', 'new').code, 0);
+  setSection(exp(repo, '003-new', 'brief.md'), 'Where it lives today', '');
+  r = run(repo, 'check');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /error .*003-new\/brief\.md: section "Where it lives today" is empty$/m);
+});
+
+test("init --force refreshes the design files a team never changed and keeps the ones they made their own", () => {
+  const repo = tmpRepo();
+  run(repo, 'init', '--cli', 'npx d2s');
+  const tpl = (name) => path.join(repo, 'design', 'templates', `${name}.md`);
+  // As 0.5.0 left them: the README rendered with the command, the spec template untouched,
+  // and a brief template the team extended with a section of its own.
+  fs.writeFileSync(path.join(repo, 'design', 'README.md'), lib.render(template05('en', 'readme'), { cli: 'npx d2s' }));
+  fs.writeFileSync(tpl('spec'), template05('en', 'spec'));
+  fs.writeFileSync(tpl('brief'), template05('en', 'brief') + '\n## Metrics\n<!-- How we will measure it. -->\n');
+  fs.writeFileSync(path.join(repo, 'design', 'context.md'), '# Product context\n\n## The product\nA shop for busy parents.\n');
+
+  const r = run(repo, 'init', '--force');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /updated design\/README\.md/, 'a README rendered with the command is recognized');
+  assert.match(read(repo, 'design', 'README.md'), /where it lives in the product today/);
+  assert.match(read(repo, 'design', 'README.md'), /npx d2s new/);
+  assert.match(r.out, /updated design\/templates\/spec\.md/);
+  assert.match(read(tpl('spec')), /^## Existing components$/m);
+  assert.match(r.out, /kept {4}design\/templates\/brief\.md {2}\(your own version; the new template adds "Where it lives today"\)/);
+  assert.match(read(tpl('brief')), /^## Metrics$/m, 'their own template is kept');
+  assert.match(r.out, /Your own templates were kept\. Add the new sections to them by hand/);
+  assert.match(r.out, /kept {4}design\/context\.md\n/, 'a filled-in context is theirs');
+  assert.equal(read(repo, 'design', 'context.md'), '# Product context\n\n## The product\nA shop for busy parents.\n');
+  assert.doesNotMatch(run(repo, 'init', '--force').out, /updated design\//, 'running it again changes nothing');
+
+  // Without --force, an existing copy is never touched.
+  const fresh = tmpRepo();
+  fs.mkdirSync(path.join(fresh, 'design', 'templates'), { recursive: true });
+  fs.writeFileSync(path.join(fresh, 'design', 'templates', 'spec.md'), template05('en', 'spec'));
+  assert.equal(run(fresh, 'init').code, 0);
+  assert.equal(read(fresh, 'design', 'templates', 'spec.md'), template05('en', 'spec'));
+
+  const he = tmpRepo();
+  run(he, 'init', '--lang', 'he');
+  fs.writeFileSync(path.join(he, 'design', 'templates', 'brief.md'), template05('he', 'brief'));
+  assert.match(run(he, 'init', '--force').out, /updated design\/templates\/brief\.md/);
+  assert.match(read(he, 'design', 'templates', 'brief.md'), /^## איפה זה חי היום$/m);
+});
+
+test('every version of the design files that d2s ships is fingerprinted, so init --force can refresh it later', () => {
+  for (const lang of lib.LANGS) {
+    for (const name of ['brief', 'insights', 'options', 'decision', 'spec', 'handoff', 'summary', 'readme', 'context']) {
+      const text = lib.packagedTemplate(lang, name);
+      assert.ok(lib.isShipped(lang, name, text), `add '${lib.fingerprint(text)}' to SHIPPED.${lang}.${name} in src/lib.js`);
+    }
+  }
+  assert.equal(lib.fingerprint('a\r\nb\n\n'), lib.fingerprint('a\nb'), 'line endings and trailing space do not count');
+  assert.notEqual(lib.fingerprint('a\nb'), lib.fingerprint('a\nc'));
 });
 
 test('Hebrew locale: right-to-left templates go through the same gate', () => {

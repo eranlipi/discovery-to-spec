@@ -10,7 +10,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.5.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.6.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -31,7 +31,7 @@ See [`examples/checkout`](examples/checkout) for a complete, fictional feature t
 ## Free and safe to adopt
 
 - MIT license, no paid tier.
-- **Zero dependencies** and no telemetry. The CLI makes no network calls, except an opt-in CI check that asks GitHub who approved a pull request. The CLI is about 1,200 lines of plain Node.js you can review in an afternoon.
+- **Zero dependencies** and no telemetry. The CLI makes no network calls, except an opt-in CI check that asks GitHub who approved a pull request. The CLI is about 1,300 lines of plain Node.js you can review in an afternoon.
 - No new accounts or licenses: it works with the GitHub repo and the Figma files you already have. The Figma MCP server and AI agents are optional.
 
 ## Install
@@ -50,7 +50,7 @@ npx github:eranlipi/discovery-to-spec init
 node path/to/discovery-to-spec/bin/d2s.js init
 ```
 
-To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.5.0`.
+To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.6.0`.
 
 ## Quick start
 
@@ -66,11 +66,11 @@ npx d2s status                                  # where every exploration stands
 
 | Stage | Document | What it holds | Led by |
 | --- | --- | --- | --- |
-| 1. Frame | `brief.md` | The problem, who it matters to, desired outcome, appetite, no-gos | Product |
+| 1. Frame | `brief.md` | The problem, who it matters to, where it lives in the product today, desired outcome, appetite, no-gos | Product |
 | 2. Research | `insights.md` | Insights with evidence and a confidence level | Design and product |
-| 3. Options | `options.md` | 2 to 4 directions with Figma links, pros and cons | Design |
+| 3. Options | `options.md` | 2 to 4 directions with Figma links, pros and cons, and what each changes in the product | Design |
 | 4. Decide | `decision.md` | The chosen direction, what was rejected and why, who approved | Product, design, engineering |
-| 5. Spec | `spec.md` | Screens, states, edge cases, acceptance criteria, accessibility | Design |
+| 5. Spec | `spec.md` | Screens, states, edge cases, acceptance criteria, accessibility, and the existing components it uses | Design |
 | 6. Handoff | `handoff.md`, `summary.md` | Generated: a handoff for development, and a one-page summary for design and product | Engineering, design and product |
 
 The structure borrows from Shape Up (appetite, no-gos), continuous discovery (evidence-based insights) and architecture decision records.
@@ -79,7 +79,7 @@ The structure borrows from Shape Up (appetite, no-gos), continuous discovery (ev
 
 | Command | What it does |
 | --- | --- |
-| `d2s init` | Creates the design folder, templates, agent skills and config. Options: `--lang en\|he`, `--dir`, `--agents claude,cursor,agents-md\|none`, `--cli`, `--ci`, `--force` |
+| `d2s init` | Creates the design folder, templates, agent skills and config. Options: `--lang en\|he`, `--dir`, `--agents claude,cursor,agents-md\|none`, `--cli`, `--ci`, `--force` (refreshes an initialized repo, see [refreshing templates](#refreshing-templates)) |
 | `d2s new "<title>"` | Starts an exploration. Options: `--slug`, `--owner` |
 | `d2s status [id]` | Lists explorations, or shows one stage by stage. `--all` includes archived ones |
 | `d2s check [id]` | Validates documents and exits with 1 on errors. Stages already passed must be complete; the current one may be in progress (`--strict` requires it too). `--verify-approvals` checks approvals against GitHub reviews (see below) |
@@ -143,13 +143,32 @@ Designers and product managers who work in a chat assistant, not in a terminal, 
 - **Gemini:** create a skill (Skills → Create → Create manually) and paste the description and the instructions.
 
 In an ordinary chat, the assistant then helps them:
-- frame the problem, pushing back when the request is a solution;
+- frame the problem, pushing back when the request is a solution, and asking where it lives in the product today;
 - turn raw interview notes into insights with evidence and confidence;
-- lay out genuinely different directions;
+- lay out genuinely different directions, each with what it changes in the product;
 - prepare the decision;
 - write the spec.
 
-Each stage ends with a document that has the team's headings. **Paste from AI** in the Figma plugin or the website sandbox fills the stage's fields from it, and the gate checks it as usual. Setup is in [integrations/claude-app/README.md](integrations/claude-app/README.md). The skill and the plain instructions are attached to each release.
+**A discovery session.** When someone brings a new request, the assistant offers to take it through Frame, Research and Options in one conversation, instead of three chats and three pastes:
+1. It frames the problem, pushing back if the request is a solution, and asks where the feature lives in the product today, with links to the current screens.
+2. It asks for whatever evidence exists (interview notes, tickets, data) and writes insights with evidence and confidence. With no evidence, it says so plainly and leaves Research short, so the gate stops there.
+3. It drafts 2 to 4 genuinely different directions in words, each with what changes in the product. Their Figma links are left to design.
+4. It ends with one document for the three stages.
+
+It never invents quotes, numbers or Figma links, and it stops before Decide: approvals stay with people. Paste your `design/context.md` into the chat and it works from your product, users, design principles and design system. The single-stage flow works as before.
+
+Setup is in [integrations/claude-app/README.md](integrations/claude-app/README.md). The skill and the plain instructions are attached to each release.
+
+### Paste from AI
+
+Each stage ends with a document that has the team's headings. **Paste from AI** in the Figma plugin or the website sandbox fills the stage's fields from it, and the gate checks it as usual.
+
+A discovery session's document has a top-level heading per stage, `# Frame`, `# Research` and `# Options` (in Hebrew `# מסגור`, `# חקר`, `# כיוונים`), each followed by that stage's `##` headings. Paste it on the exploration's current stage, and d2s:
+- fills that stage and runs the real gate. If the gate passes, it moves on and fills the next stage;
+- stops at Options: it fills it but never passes it, so design can add the frames and review it. It never fills or passes Decide;
+- stops where a gate fails (for example, when Research has no evidence) and shows the gaps next to their fields. The parts it couldn't use yet are kept as a local draft, so nothing pasted is lost, and offered again once that stage passes: "Options is waiting until Research passes."
+
+In the Figma plugin, the whole paste is saved as one commit, such as "001-checkout: Frame, Research and Options drafted by Dana via d2s plugin". A document for a single stage pastes exactly as before.
 
 ## AI agents
 
@@ -157,14 +176,14 @@ Each stage ends with a document that has the team's headings. **Paste from AI** 
 
 | Command | Helps with |
 | --- | --- |
-| `/d2s-frame` | Interviewing the requester and writing the brief, pushing back on solution-first requests |
+| `/d2s-frame` | Interviewing the requester and writing the brief, pushing back on solution-first requests and asking where it lives in the product today |
 | `/d2s-research` | Turning raw notes into insights with evidence, anonymizing personal data |
-| `/d2s-options` | Laying out genuinely different directions |
+| `/d2s-options` | Laying out genuinely different directions, each with what it changes in the product |
 | `/d2s-decide` | Preparing the decision meeting and recording the outcome (never the approval) |
-| `/d2s-spec` | Going through every state and edge case and writing testable criteria |
+| `/d2s-spec` | Going through every state and edge case, writing testable criteria and naming the components it reuses |
 | `/d2s-handoff` | Implementing from the spec, asking instead of guessing |
 
-Claude Code reads them from `.claude/skills/`, Cursor from `.cursor/commands/`. Agents that read `AGENTS.md` (Codex, Copilot and others) get the shared rules. If the Figma MCP server is connected, the skills read the linked frames.
+Claude Code reads them from `.claude/skills/`, Cursor from `.cursor/commands/`. Agents that read `AGENTS.md` (Codex, Copilot and others) get the shared rules. The skills and agents read `design/context.md` for every feature. If the Figma MCP server is connected, the skills read the linked frames, the current screens and the design-system library, and prefer existing components.
 
 Only use AI tools your organization has approved, and don't paste internal information into free public AI tools.
 
@@ -183,8 +202,15 @@ Templates ship in English (default) and Hebrew (`--lang he`, right to left). The
 ## Customizing
 
 - **Templates:** edit `design/templates/*.md` in your repo. Every `##` heading is required unless it ends with `(optional)`.
+- **Product context:** fill in `design/context.md` once: the product, its users, design principles and design system, with links to the Figma library, Storybook and tokens. The assistant and agents read it for every feature.
 - **Config:** `.d2s.json` holds `lang`, `dir`, `cli` (the command the generated docs and skills use) and `approvals` (see [the decision gate](#the-decision-gate)).
 - The handoff reads a few headings by name: the problem, open questions, chosen direction, approved by and acceptance criteria. Keep those if you rename others.
+
+### Refreshing templates
+
+Your repo keeps its own copies of the templates, so a new d2s version doesn't change them until you run `d2s init --force`. It refreshes every file in `design/templates/`, plus `design/README.md` and `design/context.md`, that you haven't changed, and keeps the ones you have. For a template you've made your own, it lists the sections the new version adds, to copy in by hand. Your settings and the decision log are kept.
+
+**Upgrading to 0.6.** The new templates add "Where it lives today" to the brief and make "Existing components" required in the spec. Explorations that passed Frame or Spec before the upgrade don't have them, so `d2s check` shows those as warnings, not errors, and CI keeps passing. The stage an exploration is at, and every new exploration, need them to pass the gate.
 
 ## Roadmap
 

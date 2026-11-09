@@ -21,5 +21,5 @@
 ## Copy (optional)
 <!-- All on-screen text, including error messages. -->
 
-## Existing components (optional)
-<!-- Which design system components are used, and what is new. -->
+## Existing components
+<!-- The design-system components this reuses, with a link to the Figma library or Storybook, and any new component with the reason it is needed. If nothing is new, write "No new components". -->

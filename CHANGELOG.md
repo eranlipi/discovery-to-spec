@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.6.0 (2026-11-09)
+
+One flow for product managers, and documents that ask how a feature fits the product.
+
+### A discovery session in the d2s assistant
+
+- **New: a discovery session.** When someone brings a new request, the assistant in Claude, ChatGPT or Gemini offers to take it through Frame, Research and Options in one conversation, instead of three chats and three pastes:
+  - it frames the problem, pushing back on solution-first requests, and asks where the feature lives in the product today, with links to the current screens;
+  - it asks for whatever evidence exists and writes insights with evidence and confidence. With none, it says so plainly and leaves Research short, so the gate stops there;
+  - it drafts 2 to 4 genuinely different directions in words, each with what changes in the product, and leaves their Figma links to design;
+  - it ends with one document: `# Frame`, `# Research` and `# Options` (in Hebrew `# מסגור`, `# חקר`, `# כיוונים`), each followed by the stage's headings.
+- It never invents quotes, numbers or Figma links, and it stops before Decide: approvals stay with people. The single-stage flow is unchanged.
+- Paste your `design/context.md` into the chat, and the assistant works from your product, users, design principles and design system.
+
+### Paste from AI takes the whole session
+
+- In the Figma plugin and the website sandbox, **Paste from AI** recognizes a session's document by its stage headings, in English or Hebrew, and fills the stages in turn: the current stage first, then the real gate, then the next stage while the gate passes.
+- It stops at Options: filled but never passed, so design can add the frames and review it. It never fills or passes Decide.
+- When a gate stops it, the gaps show next to their fields as before. The parts not used yet wait as a local draft ("Options is waiting until Research passes") and are offered again once that stage passes.
+- In the plugin, the whole paste is saved as one commit, such as "001-checkout: Frame, Research and Options drafted by Dana via d2s plugin".
+- A document for one stage pastes exactly as before.
+
+### How a feature fits the product
+
+- **brief.md** has a new required section, **Where it lives today** (in Hebrew, איפה זה חי היום): the screens and flows it touches today, with links to the current Figma frames, and what users do there. For a brand-new area, "New area, nothing exists yet" is enough.
+- **options.md** asks each direction what changes in the product: the screens that change, the design-system components it reuses, new components, and the effect on other flows.
+- **spec.md**: **Existing components** is now required.
+- **context.md** says the assistant and agents read it for every feature, and asks for links to the Figma library, Storybook and tokens.
+- The summary for design and product shows where the feature lives today.
+- The Claude Code skills ask the new questions and read `design/context.md`. With the Figma MCP server connected, they read the current screens and the design-system library and prefer existing components.
+
+### Upgrading from 0.5.0
+
+- **Run `d2s init --force`** to get the new templates. It now refreshes the templates, `design/README.md` and `design/context.md` that you haven't changed, and keeps the ones you have, listing the sections to add to them by hand.
+- Explorations that passed Frame or Spec before the upgrade don't have the new sections. `d2s check` shows them as warnings, not errors, so CI keeps passing. The stage an exploration is at, and every new exploration, need them to pass the gate.
+- To paste whole sessions in Figma, import the new plugin zip below. For the discovery session, upload the new skill zip to Claude, or copy the new instructions into your ChatGPT project or Gemini skill.
+
 ## 0.5.0 (2026-11-08)
 
 The d2s assistant, in Claude, ChatGPT or Gemini.

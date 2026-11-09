@@ -4,18 +4,18 @@ Every feature or problem goes through six stages. Each stage leaves one short do
 
 | Stage | Document | What it holds | Led by |
 | --- | --- | --- | --- |
-| 1. Frame | `brief.md` | The problem, who it matters to, desired outcome, appetite and no-gos | Product |
+| 1. Frame | `brief.md` | The problem, who it matters to, where it lives in the product today, desired outcome, appetite and no-gos | Product |
 | 2. Research | `insights.md` | User insights with evidence and confidence | Design and product |
-| 3. Options | `options.md` | 2 to 4 directions with Figma links, pros and cons | Design |
+| 3. Options | `options.md` | 2 to 4 directions with Figma links, pros and cons, and what each changes in the product | Design |
 | 4. Decision gate | `decision.md` | What was chosen, what was rejected, why, and who approved | Product, design and engineering |
-| 5. Spec | `spec.md` | Screens, states, edge cases and acceptance criteria | Design |
+| 5. Spec | `spec.md` | Screens, states, edge cases, acceptance criteria and the components used | Design |
 | 6. Handoff | `handoff.md`, `summary.md` | Generated: links and criteria for development, and a one-page summary for design and product | Engineering, design and product |
 
 ## Where things live
 
 - `explorations/` — one folder per feature, holding the documents of every stage.
 - `decisions.md` — the log of every decision made.
-- `context.md` — standing product context: the product, users, design principles.
+- `context.md` — standing product context: the product, users, design principles and design system. The AI assistant and agents read it for every feature.
 - `templates/` — the templates. Adapt them to your team.
 
 ## No terminal needed

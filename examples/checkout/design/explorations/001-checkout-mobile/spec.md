@@ -31,5 +31,5 @@
 ## Copy (optional)
 Card declined: "Your card was declined. Check the expiry date or try another card."
 
-## Existing components (optional)
+## Existing components
 Form fields, primary button and error message from the design system. No new components.
