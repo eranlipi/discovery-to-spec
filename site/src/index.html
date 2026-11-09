@@ -104,6 +104,7 @@
     <div class="cmd" dir="ltr"><span class="prompt">$</span><code>node path/to/discovery-to-spec/bin/d2s.js init</code><button type="button" class="copy" data-copy="node path/to/discovery-to-spec/bin/d2s.js init" data-i18n="copy">copy</button></div>
   </div>
   <p class="note" data-i18n="install.note">Requires Node.js 18 or later, for whoever runs the tool. Add <code dir="ltr">--lang he</code> for Hebrew templates.</p>
+  <p class="note" data-i18n="install.upgrade"><b>Upgrading to 0.6?</b> Update the package, then run <code dir="ltr">d2s init --force</code>. It refreshes the templates you haven’t changed and keeps the ones you have, with a list of the new sections to add to them. Explorations that passed Frame or Spec before the upgrade show the new sections as warnings, not errors, so CI keeps passing. Designers get the new Figma plugin from the <a href="https://github.com/eranlipi/discovery-to-spec/releases/tag/v0.6.0">release</a>, and the new <a href="#assistant">AI assistant</a> below.</p>
 </section>
 
 <section id="workflow" class="wrap block" aria-labelledby="workflow-title">
@@ -252,6 +253,7 @@
     </div>
   </div>
 
+  <p class="note" data-i18n="assistant.upgrade"><b>Added it before 0.6?</b> Upload the new skill, or copy the instructions again, to get the discovery session.</p>
   <p class="note" data-i18n="assistant.menus">These apps rename their menus from time to time. If a name here doesn’t match, look for it in the app’s settings or customize menu.</p>
   <div class="assist-try">
     <div>
@@ -305,7 +307,7 @@
 <section id="faq" class="wrap block" aria-labelledby="faq-title">
   <h2 id="faq-title" class="sec"><span class="sec-num" dir="ltr">08</span><span data-i18n="faq.title">Questions</span></h2>
   <div class="faq">
-    <details><summary data-i18n="faq.q1">Do designers need a terminal?</summary><p data-i18n="faq.a1">No. Try the Designer view above: every stage is a form with a Next stage button, and it writes the same Markdown files the CLI does. Today designers and product managers can also edit the files on github.com, or write in Figma or a doc and have someone paste it in. A Figma plugin is planned.</p></details>
+    <details><summary data-i18n="faq.q1">Do designers need a terminal?</summary><p data-i18n="faq.a1">No. Try the Designer view above: every stage is a form with a Next stage button, and it writes the same Markdown files the CLI does. The <a href="https://github.com/eranlipi/discovery-to-spec/blob/master/figma-plugin/README.md">Figma plugin</a> brings the same forms into Figma, and anyone can also edit the files on github.com.</p></details>
     <details><summary data-i18n="faq.q2">Does it replace OpenSpec?</summary><p data-i18n="faq.a2">No, it comes before it. OpenSpec starts once you know the change you want. discovery-to-spec helps you get there, and drafts an OpenSpec proposal when you do.</p></details>
     <details><summary data-i18n="faq.q3">Do we need a paid Figma plan?</summary><p data-i18n="faq.a3">No. Figma links are plain links in the docs. Agents can read the frames through the Figma MCP server if you use it, but nothing depends on it.</p></details>
     <details><summary data-i18n="faq.q4">Can an AI agent approve a decision?</summary><p data-i18n="faq.a4">No. The skills tell agents never to fill in who approved, and the gate wants one line per person with a name, role and date. It rejects placeholders like “TBD” and the names of AI tools, and it can check each approval against a GitHub review. Agents help you write; people decide.</p></details>

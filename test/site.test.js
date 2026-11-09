@@ -56,6 +56,19 @@ test('the site offers the d2s assistant for Claude, ChatGPT and Gemini', () => {
   assert.ok(assistant.description.length > 0 && assistant.description.length <= 1024, 'the description fits a Gemini skill');
 });
 
+test('every translatable element has its Hebrew text, including the upgrade notes', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'site', 'src', 'index.html'), 'utf8');
+  const context = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'site', 'src', 'i18n.js'), 'utf8'), context);
+  const he = context.window.D2S_I18N.he;
+  const keys = [...new Set([...html.matchAll(/data-i18n(?:-aria)?="([^"]+)"/g)].map((m) => m[1]))];
+  assert.deepEqual(keys.filter((k) => typeof he[k] !== 'string'), [], 'every data-i18n key needs a Hebrew entry in i18n.js');
+  assert.match(html, /data-i18n="install\.upgrade"><b>Upgrading to 0\.6\?<\/b>[^<]*<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(he['install.upgrade'], /<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(html, /data-i18n="assistant\.upgrade"><b>Added it before 0\.6\?<\/b>/);
+  assert.doesNotMatch(html + he['faq.a1'], /plugin is planned|תוסף ל-Figma מתוכנן/, 'the Figma plugin has shipped');
+});
+
 test('the sandbox runs the real CLI in memory', () => {
   const html = fs.readFileSync(path.join(buildSite(), 'index.html'), 'utf8');
   const d2s = loadSandbox(html);
