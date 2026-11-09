@@ -129,6 +129,7 @@ html[lang="he"] .sec { letter-spacing: 0; }
 .sec-num { color: var(--accent); font-size: 14px; }
 .note, .intro { max-width: 46em; color: var(--muted); }
 .note { margin: 20px 0 0; font-size: 15px; }
+.note code { white-space: nowrap; }
 .intro { margin: -8px 0 24px; font-size: 17px; }
 
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; font-family: var(--display); }
