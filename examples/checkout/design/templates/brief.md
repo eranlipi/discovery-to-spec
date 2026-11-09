@@ -16,6 +16,9 @@ created: {{date}}
 ## Who it matters to
 <!-- Which users are affected, and in what situation or moment. -->
 
+## Where it lives today
+<!-- Which screens and flows this touches today, with links to the current Figma frames, and what users do there now. For a brand-new area, "New area, nothing exists yet" is enough. -->
+
 ## Desired outcome
 <!-- The result you want, ideally something you can observe or measure. E.g. "fewer support tickets about changing an address". -->
 

@@ -30,6 +30,7 @@ The repository needs a `.d2s.json` at its root (`npx d2s init`).
 | New exploration | A title and an owner (your Figma name by default). A Hebrew title asks for a short Latin folder name. |
 | Stage form | One field per section of the template, with its guidance as helper text. |
 | Attach selected frames | Select frames on the canvas, click a field, attach. Each link gets a **Show on canvas** button that jumps to the frame, on any page. |
+| Paste from AI | Fills the stage from a document written with the d2s assistant. A discovery session's document fills Frame, Research and Options in turn, through the gate, and stops at Options. What has to wait for a gate is kept on this computer and offered again later. The whole paste is saved as one commit. |
 | Next stage | Runs the gate. Gaps show next to their fields. Passing it saves right away. |
 | Save | Sends your changes to GitHub as one commit, such as "002-saved-cards: Research updated by Dana via d2s plugin". If someone else changed the same file since you opened it, you choose: keep yours or take theirs. |
 | Handoff | Two documents: the summary for design and product, and the handoff for developers, with a **Copy link for developers** button. |
@@ -37,7 +38,7 @@ The repository needs a `.d2s.json` at its root (`npx d2s init`).
 ## Where things are kept
 
 - **The documents:** in your GitHub repository, as commits.
-- **The token and unsaved drafts:** on this computer only, in Figma's plugin storage. Closing the panel loses nothing.
+- **The token, unsaved drafts, and pasted parts waiting for their stage:** on this computer only, in Figma's plugin storage. Closing the panel loses nothing.
 - **Which explorations belong to this file, and the file's link:** in the Figma file itself.
 
 The plugin talks only to `api.github.com`.
@@ -56,7 +57,7 @@ The plugin talks only to `api.github.com`.
 npm run plugin:dev     # builds the plugin and serves it next to a fake Figma canvas and a fake GitHub
 ```
 
-Open the printed address. `figma-plugin/dev/harness.html` runs the real `code.js` against a stand-in `figma` object, and the panel connects to an in-memory GitHub seeded with `examples/checkout`. Tests are in `test/plugin.test.js`.
+Open the printed address. `figma-plugin/dev/harness.html` runs the real `code.js` against a stand-in `figma` object, and the panel connects to an in-memory GitHub seeded with `examples/checkout`. Tests are in `test/plugin.test.js`; they also run the built panel against `dev/fake-dom.js`, a small stand-in for the browser.
 
 | File | What it is |
 | --- | --- |

@@ -88,8 +88,10 @@ test('the stage form reads and writes the same Markdown the CLI checks', () => {
   let doc = lib.render(template, { id: '001-x', title: 'X', date: '2026-11-08', owner: 'Dana' });
 
   const m = Form.model(doc, template);
-  assert.deepEqual(m.fields.map((f) => f.label), ['Problem', 'Who it matters to', 'Desired outcome', 'Appetite', 'No-gos', 'Open questions']);
-  assert.equal(m.fields[5].optional, true, '"(optional)" becomes a badge');
+  assert.deepEqual(m.fields.map((f) => f.label), ['Problem', 'Who it matters to', 'Where it lives today', 'Desired outcome', 'Appetite', 'No-gos', 'Open questions']);
+  assert.equal(m.fields[2].optional, false, 'where it lives today is required');
+  assert.match(m.fields[2].helper, /New area, nothing exists yet/, 'a brand-new area is told what counts');
+  assert.equal(m.fields[6].optional, true, '"(optional)" becomes a badge');
   assert.match(m.fields[0].helper, /^What isn't working today/, 'the template note is the helper text');
   assert.match(m.intro, /^Stage 1 of 6: frame/);
 
@@ -135,4 +137,129 @@ test('each sandbox view gets its own project, and status fits the terminal', () 
   assert.ok(narrow.every((l) => l.length <= 70), 'every line fits in 70 columns');
 
   assert.match(designer.run(['check', '--verify-approvals']).lines.join('\n'), /verification is off/, 'no network in the browser');
+});
+
+// ---------- Paste from AI: a discovery session's document ----------
+
+/** A fresh in-memory d2s from the built page, with one exploration at Frame. */
+function sandboxProject(html, lang = 'en') {
+  const m = html.match(/<script id="d2s-sandbox">([\s\S]*?)<\/script>/);
+  const context = { window: {} };
+  vm.runInNewContext(m[1], context);
+  const d2s = context.window.D2S_NEW();
+  assert.equal(d2s.run(['init', '--lang', lang, '--cli', 'd2s', '--agents', 'none']).code, 0);
+  assert.equal(d2s.run(['new', lang === 'he' ? 'שמירת כרטיס' : 'Saved cards', '--slug', 'cards']).code, 0);
+  return d2s;
+}
+
+const EN_FRAME = [
+  '## Problem', 'Returning customers type their card again on every order.',
+  '## Who it matters to', 'Returning customers who order on their phone.',
+  '## Where it lives today', 'The Payment screen in checkout. Figma: to be added by design.',
+  '## Desired outcome', 'More returning customers finish paying on mobile.',
+  '## Appetite', 'Two weeks of a small team.',
+  '## No-gos', 'No new payment provider.',
+].join('\n');
+const EN_RESEARCH = [
+  '## Sources', '5 interviews with returning customers.',
+  '## Key insights', '1. **Typing the card is where they give up.** 3 of 5 participants. Confidence: medium.',
+  '## Opportunities', 'How might we let returning customers pay without typing?',
+].join('\n');
+const EN_OPTIONS = [
+  '## Direction A', 'Saved cards. What changes in the product: a card picker in Payment. Figma: to be added by design.',
+  '## Direction B', 'A wallet button. What changes in the product: a new button above the form. Figma: to be added by design.',
+  '## Recommendation', 'Direction A, as a suggestion for the team.',
+].join('\n');
+const session = (parts) => ['Here is the whole session.', '', '```markdown', ...parts, '```', '', 'In d2s (the Figma plugin or the website), choose **Paste from AI** and paste it.'].join('\n');
+
+test('Paste from AI tells a discovery session from a single-stage document, in English and Hebrew', () => {
+  const Form = require('../site/src/stage-form.js');
+  const parts = Form.splitStages(session(['# Frame', EN_FRAME, '', '# Research', EN_RESEARCH, '', '# Options', EN_OPTIONS]));
+  assert.deepEqual(parts.map((p) => p.stage), ['frame', 'research', 'options']);
+  assert.match(parts[0].text, /^## Problem\nReturning customers/);
+  assert.doesNotMatch(parts[2].text, /Paste from AI/, 'the closing line stays out');
+
+  const he = Form.splitStages('# מסגור\n## הבעיה\nא\n\n# חקר\n## מקורות\nב\n\n# כיוונים\n## כיוון א׳\nג');
+  assert.deepEqual(he.map((p) => p.stage), ['frame', 'research', 'options']);
+  assert.deepEqual(
+    Form.splitStages('# 1. Frame\n## Problem\nx\n# Stage 2 · Research\n## Sources\ny\n# **Options:**\n## Direction A\nz').map((p) => p.stage),
+    ['frame', 'research', 'options'],
+    'numbered and bold stage headings',
+  );
+  assert.equal(Form.splitStages('## Problem\nNo stage headings here.'), null, 'a single-stage document is pasted as before');
+  assert.equal(Form.splitStages('# Checkout drop-off: brief\n## Problem\nx'), null, 'a title is not a stage');
+  assert.equal(Form.splitStages('```\n# Frame\n```\n## Problem\nx'), null, 'headings inside code blocks do not count');
+});
+
+test('Paste from AI fills a discovery session stage by stage through the real gate, up to Options', () => {
+  const Form = require('../site/src/stage-form.js');
+  const html = fs.readFileSync(path.join(buildSite(), 'index.html'), 'utf8');
+  const dir = 'design/explorations/001-cards/';
+  const decide = ['# Decide', '## Chosen direction', 'A', '## Approved by', '- Dana Levi, design, 2026-11-20'];
+
+  // Given an exploration at Frame and a complete combined document,
+  let d2s = sandboxProject(html);
+  let r = Form.applySession(d2s, '001-cards', Form.splitStages(session(['# Frame', EN_FRAME, '# Research', EN_RESEARCH, '# Options', EN_OPTIONS, ...decide])));
+  // then Frame and Research pass, Options is filled and stays open, and nothing in Decide is touched.
+  assert.deepEqual(r.steps.map((s) => [s.stage, s.passed]), [['frame', true], ['research', true], ['options', false]]);
+  assert.equal(r.to, 'options');
+  assert.equal(r.stopped, null);
+  assert.deepEqual(r.pending, []);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.unused)), [{ stage: 'decide', why: 'team' }]);
+  assert.match(d2s.read(dir + 'brief.md'), /^stage: options$/m);
+  assert.match(d2s.read(dir + 'brief.md'), /## Where it lives today\n<!--[^\n]*-->\nThe Payment screen in checkout\./);
+  assert.match(d2s.read(dir + 'insights.md'), /Typing the card is where they give up/);
+  assert.match(d2s.read(dir + 'options.md'), /## Direction B\n<!--[^\n]*-->\nA wallet button\./);
+  assert.ok(!d2s.exists(dir + 'decision.md'), 'Decide is never filled or passed');
+
+  // Given a combined document with an empty Research part,
+  d2s = sandboxProject(html);
+  const empty = ['# Research', '## Sources', 'None shared yet: no interviews, tickets or data.', '## Key insights', '', '## Opportunities', ''];
+  r = Form.applySession(d2s, '001-cards', Form.splitStages(session(['# Frame', EN_FRAME, ...empty, '# Options', EN_OPTIONS])));
+  // then Frame passes, Research shows its gaps, and the Options part is kept.
+  assert.deepEqual(r.steps.map((s) => [s.stage, s.passed]), [['frame', true], ['research', false]]);
+  assert.equal(r.stopped, 'research');
+  const ctx = d2s.lib.loadContext(d2s.cwd);
+  const exp = d2s.lib.listExplorations(ctx)[0];
+  const gaps = Array.from(d2s.lib.checkStageDoc(ctx, exp, d2s.lib.STAGES[1]).issues, (i) => i.section); // a copy: the sandbox is another realm
+  assert.deepEqual(gaps, ['Key insights', 'Opportunities'], 'the gaps are the ones the form shows next to its fields');
+  assert.match(r.gate.join('\n'), /section "Key insights" is empty/);
+  assert.deepEqual(r.pending.map((p) => p.stage), ['options']);
+  assert.ok(!d2s.exists(dir + 'options.md'));
+  // Once Research passes, the kept Options part is offered again and fills Options.
+  d2s.write(dir + 'insights.md', Form.applyDocument(d2s.read(dir + 'insights.md'), d2s.lib.getTemplate(ctx, 'insights'), EN_RESEARCH).text);
+  assert.equal(d2s.run(['next', '1']).code, 0);
+  r = Form.applySession(d2s, '001-cards', r.pending);
+  assert.deepEqual(r.steps.map((s) => [s.stage, s.passed]), [['options', false]]);
+  assert.match(d2s.read(dir + 'options.md'), /Saved cards\./);
+  assert.match(d2s.read(dir + 'brief.md'), /^stage: options$/m, 'Options is never passed automatically');
+
+  // A part for a stage that already passed is not used, and one for the current stage starts it.
+  r = Form.applySession(d2s, '001-cards', Form.splitStages(session(['# Frame', EN_FRAME, '# Options', EN_OPTIONS])));
+  assert.deepEqual(JSON.parse(JSON.stringify(r.unused)), [{ stage: 'frame', why: 'passed' }]);
+  assert.deepEqual(r.steps.map((s) => s.stage), ['options']);
+
+  // Nothing for the stage it is at: nothing is filled, and the rest waits.
+  d2s = sandboxProject(html);
+  r = Form.applySession(d2s, '001-cards', Form.splitStages(session(['# Research', EN_RESEARCH, '# Options', EN_OPTIONS])));
+  assert.deepEqual(r.steps, []);
+  assert.deepEqual(r.pending.map((p) => p.stage), ['research', 'options']);
+  assert.match(d2s.read(dir + 'brief.md'), /^stage: frame$/m);
+});
+
+test('a Hebrew discovery session goes through the same gates with the Hebrew headings', () => {
+  const Form = require('../site/src/stage-form.js');
+  const html = fs.readFileSync(path.join(buildSite(), 'index.html'), 'utf8');
+  const d2s = sandboxProject(html, 'he');
+  const frame = ['# מסגור', '## הבעיה', 'לקוחות חוזרים מקלידים כרטיס בכל הזמנה.', '## למי זה חשוב', 'לקוחות חוזרים במובייל.',
+    '## איפה זה חי היום', 'מסך התשלום. Figma: יתווסף על ידי עיצוב.', '## מה רוצים שיקרה', 'יותר תשלומים שמושלמים.',
+    '## מסגרת זמן', 'שבועיים.', '## מה לא עושים', 'לא מחליפים ספק סליקה.'];
+  const research = ['# חקר', '## מקורות', '5 ראיונות.', '## תובנות מרכזיות', '', '## הזדמנויות', ''];
+  const options = ['# כיוונים', "## כיוון א'", 'כרטיס שמור. מה משתנה במוצר: בוחר כרטיסים במסך התשלום.', '## כיוון ב׳', 'כפתור ארנק.', '## המלצה', 'כיוון א׳.'];
+  const r = Form.applySession(d2s, '001-cards', Form.splitStages(['```markdown', ...frame, ...research, ...options, '```', 'ב-d2s (בתוסף ב-Figma או באתר) בוחרים **הדבקה מ-AI** ומדביקים.'].join('\n')));
+  assert.deepEqual(r.steps.map((s) => [s.stage, s.passed]), [['frame', true], ['research', false]]);
+  assert.deepEqual(r.steps[0].filled, ['הבעיה', 'למי זה חשוב', 'איפה זה חי היום', 'מה רוצים שיקרה', 'מסגרת זמן', 'מה לא עושים']);
+  assert.match(r.gate.join('\n'), /section "תובנות מרכזיות" is empty/);
+  assert.deepEqual(r.pending.map((p) => p.stage), ['options']);
+  assert.match(r.pending[0].text, /כרטיס שמור/);
 });

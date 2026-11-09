@@ -19,6 +19,10 @@ Fictional example. About 40% of users who reach checkout on mobile don't complet
 <!-- Which users are affected, and in what situation or moment. -->
 Returning customers who order from their phone, usually during a short break or on the go.
 
+## Where it lives today
+<!-- Which screens and flows this touches today, with links to the current Figma frames, and what users do there now. For a brand-new area, "New area, nothing exists yet" is enough. -->
+Fictional example. On mobile, checkout is the desktop form made smaller. After the cart come two long screens, Shipping details (https://www.figma.com/design/EXAMPLE/Checkout?node-id=2-1) and Payment (https://www.figma.com/design/EXAMPLE/Checkout?node-id=2-2), then Order confirmation. Customers type every field on each order, and a declined card shows "Payment failed" with no reason.
+
 ## Desired outcome
 <!-- The result you want, ideally something you can observe or measure. E.g. "fewer support tickets about changing an address". -->
 More completed mobile orders, and fewer support tickets saying "the payment didn't go through".

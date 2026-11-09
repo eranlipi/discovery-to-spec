@@ -55,13 +55,25 @@
       badFileLink: 'That isn’t a Figma file link.',
       showOnCanvas: 'Show on canvas',
       pasteButton: 'Paste from AI',
-      pasteTitle: 'Paste the document your AI assistant wrote for this stage',
-      pasteHint: 'Each "## heading" fills the field with the same name. Fields without a matching heading stay as they are.',
+      pasteTitle: 'Paste the document your AI assistant wrote',
+      pasteHint: 'Each "## heading" fills the field with the same name, and other fields stay as they are. A discovery session\u2019s document, with "# Frame", "# Research" and "# Options", fills each stage in turn and runs the gate between them.',
       pasteApply: 'Fill the fields',
       pasteFilled: 'Filled from the AI document: {fields}.',
       pasteIgnored: ' Not used: {headings}.',
       pasteSkipped: ' "{fields}" is left for people to fill in.',
       pasteNothing: 'No heading in the text matches this stage\u2019s fields. Ask the assistant for the document with the stage\u2019s headings.',
+      sessionPassed: 'Passed the gate: {stages}.',
+      sessionStopped: 'The gate stopped at {stage}. Finish these, then press Next stage again:',
+      sessionOptions: 'Options is filled from your document and stays open: attach the frames and review it, then press Next stage.',
+      sessionNext: 'Next: {stage}. The document has no part for it, so fill it in here.',
+      sessionNothing: 'The document has no part for {stage}, the stage this exploration is at.',
+      sessionUnusedPassed: 'Not used, because these stages already passed: {stages}.',
+      sessionUnusedTeam: 'A pasted session stops before Decide, so these parts were not used: {stages}.',
+      pendingOne: 'From your pasted document: {stages} is waiting until {stage} passes the gate.',
+      pendingMany: 'From your pasted document: {stages} are waiting until {stage} passes the gate.',
+      pendingReady: 'Ready from your pasted document: {stages}.',
+      pendingFill: 'Fill {stages}',
+      pendingDiscard: 'Discard',
       notFound: 'That frame isn’t in this file anymore.',
       next: 'Next stage',
       save: 'Save',
@@ -100,6 +112,7 @@
       commitEdit: '{id}: {stage} updated by {user} via d2s plugin',
       commitNext: '{id}: {from} → {to} by {user} via d2s plugin',
       commitNew: '{id}: started by {user} via d2s plugin',
+      commitSession: '{id}: {stages} drafted by {user} via d2s plugin',
       someone: 'a designer',
     },
     he: {
@@ -145,13 +158,25 @@
       badFileLink: 'זה לא קישור לקובץ Figma.',
       showOnCanvas: 'להציג בקנבס',
       pasteButton: 'הדבקה מ-AI',
-      pasteTitle: 'מדביקים את המסמך שהעוזר כתב לשלב הזה',
-      pasteHint: 'כל כותרת "##" ממלאת את השדה עם אותו שם. שדות בלי כותרת מתאימה נשארים כמו שהם.',
+      pasteTitle: 'מדביקים את המסמך שהעוזר כתב',
+      pasteHint: 'כל כותרת "##" ממלאת את השדה עם אותו שם, ושאר השדות נשארים כמו שהם. מסמך של סשן דיסקברי, עם "# מסגור", "# חקר" ו-"# כיוונים", ממלא שלב אחרי שלב ומריץ את השער ביניהם.',
       pasteApply: 'למלא את השדות',
       pasteFilled: 'מולא מהמסמך: {fields}.',
       pasteIgnored: ' לא נכנסו: {headings}.',
       pasteSkipped: ' את "{fields}" ממלאים אנשים בעצמם.',
       pasteNothing: 'אף כותרת בטקסט לא מתאימה לשדות של השלב הזה. בקשו מהעוזר את המסמך עם הכותרות של השלב.',
+      sessionPassed: 'עברו את השער: {stages}.',
+      sessionStopped: 'השער עצר בשלב "{stage}". משלימים את אלה ולוחצים שוב על "לשלב הבא":',
+      sessionOptions: 'הכיוונים מולאו מהמסמך ונשארים פתוחים: מצרפים frames, עוברים עליהם ולוחצים על "לשלב הבא".',
+      sessionNext: 'השלב הבא: "{stage}". אין לו חלק במסמך, אז ממלאים אותו כאן.',
+      sessionNothing: 'אין במסמך חלק לשלב "{stage}", שבו התהליך נמצא עכשיו.',
+      sessionUnusedPassed: 'לא נכנסו, כי השלבים האלה כבר עברו: {stages}.',
+      sessionUnusedTeam: 'הדבקה של סשן נעצרת לפני ההחלטה, ולכן החלקים האלה לא נכנסו: {stages}.',
+      pendingOne: 'מהמסמך שהדבקתם, ממתין לשער של "{stage}": {stages}.',
+      pendingMany: 'מהמסמך שהדבקתם, ממתינים לשער של "{stage}": {stages}.',
+      pendingReady: 'מוכן מהמסמך שהדבקתם: {stages}.',
+      pendingFill: 'למלא: {stages}',
+      pendingDiscard: 'למחוק',
       notFound: 'ה-frame הזה כבר לא בקובץ.',
       next: 'לשלב הבא',
       save: 'לשמור',
@@ -190,6 +215,7 @@
       commitEdit: '{id}: {stage} עודכן על ידי {user} דרך התוסף של d2s',
       commitNext: '{id}: {from} → {to} על ידי {user} דרך התוסף של d2s',
       commitNew: '{id}: נפתח על ידי {user} דרך התוסף של d2s',
+      commitSession: '{id}: {stages} נוסחו על ידי {user} דרך התוסף של d2s',
       someone: 'מעצב/ת',
     },
   };
@@ -204,6 +230,7 @@
     linked: [],
     selection: [],
     drafts: {},
+    pending: {}, // parts of a pasted discovery session waiting for their stage, by repo#branch#exploration
     settings: null,
     client: null,
     d2s: null,
@@ -308,6 +335,14 @@
 
   function relPath(abs) {
     return S.d2s.path.relative(S.d2s.cwd, abs);
+  }
+
+  /** Stage names, as the stepper shows them: "Frame, Research and Options", "מסגור, חקר וכיוונים". */
+  function stageList(ids) {
+    var names = ids.map(function (id) { return t('stages')[S.d2s.lib.stageIndex(id)]; });
+    if (names.length < 2) return names.join('');
+    var last = names.pop();
+    return names.join(', ') + (S.lang === 'he' ? ' ו' : ' and ') + last;
   }
 
   // ---------- loading from GitHub ----------
@@ -441,6 +476,7 @@
     var user = S.user || t('someone');
     if (action && action.from) return t('commitNext', { id: S.expId, from: action.from, to: action.to, user: user });
     if (action && action.started) return t('commitNew', { id: S.expId, user: user });
+    if (action && action.session) return t('commitSession', { id: S.expId, stages: stageList(action.session), user: user });
     var ids = [];
     var stages = [];
     Object.keys(changes).forEach(function (p) {
@@ -595,7 +631,9 @@
   }
 
   /** Fill the current stage's fields from a document written with an AI assistant. */
-  function pasteFromClaude(pasted) {
+  function pasteFromAI(pasted) {
+    var parts = Form.splitStages(pasted);
+    if (parts) return pasteSession(parts);
     var e = exploration();
     var path = relPath(S.d2s.path.join(e.exp.dir, e.stage.file));
     var approvals = Form.keyOf(S.d2s.lib.KEY_SECTIONS[e.ctx.lang].approvedBy);
@@ -617,6 +655,97 @@
     if (S.gateShown) showGaps();
   }
 
+  // ---------- a discovery session's document ----------
+
+  function pendingKey() {
+    return draftKey() + '#' + S.expId;
+  }
+
+  function pendingParts() {
+    return S.pending[pendingKey()] || [];
+  }
+
+  /** Keep the parts that can't be used yet on this computer, like unsaved drafts. */
+  function setPending(parts) {
+    if (parts.length) S.pending[pendingKey()] = parts;
+    else delete S.pending[pendingKey()];
+    call('store', { key: 'd2s-pending', value: S.pending }).catch(function () {});
+  }
+
+  /**
+   * From the current stage, each stage is filled and goes through the real gate, up to Options,
+   * which stays open. What can't be used yet is kept. The whole paste is saved as one commit.
+   */
+  function pasteSession(parts) {
+    clearTimeout(refs.gateTimer);
+    // Parts kept from an earlier paste still count, unless this one has a newer part for their stage.
+    var stages = parts.map(function (p) { return p.stage; });
+    parts = parts.concat(pendingParts().filter(function (p) { return stages.indexOf(p.stage) < 0; }));
+    var e = exploration();
+    var approvals = Form.keyOf(S.d2s.lib.KEY_SECTIONS[e.ctx.lang].approvedBy);
+    var r = Form.applySession(S.d2s, S.expId, parts, { skip: [approvals] });
+    setPending(r.pending);
+    persistDrafts();
+    S.pasteOpen = false;
+    S.view = null;
+    S.gateShown = !!r.stopped;
+    S.notice = sessionNotice(r);
+    render();
+    var drafted = r.steps.filter(function (x) { return x.filled.length || x.passed; }).map(function (x) { return x.stage; });
+    if (drafted.length) save({ session: drafted });
+  }
+
+  function sessionNotice(r) {
+    var name = function (id) { return t('stages')[S.d2s.lib.stageIndex(id)]; };
+    var passed = r.steps.filter(function (x) { return x.passed; }).map(function (x) { return x.stage; });
+    var lastStep = r.steps[r.steps.length - 1];
+    var n = { kind: 'ok', text: passed.length ? t('sessionPassed', { stages: stageList(passed) }) + ' ' : '' };
+    if (r.stopped) {
+      n.kind = 'gate';
+      n.text += t('sessionStopped', { stage: name(r.stopped) });
+      n.items = gaps(exploration()).list;
+      // Blocked by something outside this stage's fields: show what d2s printed.
+      if (!n.items.length) n.items = r.gate.filter(function (l) { return /^\s+\S/.test(l); }).map(function (l) { return { key: null, text: l.trim() }; });
+    } else if (lastStep && lastStep.stage === 'options') n.text += t('sessionOptions');
+    else if (r.steps.length) n.text += t('sessionNext', { stage: name(r.to) });
+    else {
+      n.kind = 'gate';
+      n.text = t('sessionNothing', { stage: name(r.to) });
+    }
+    var notes = [];
+    var unused = function (why) { return r.unused.filter(function (u) { return u.why === why; }).map(function (u) { return u.stage; }); };
+    if (unused('passed').length) notes.push(t('sessionUnusedPassed', { stages: stageList(unused('passed')) }));
+    if (unused('team').length) notes.push(t('sessionUnusedTeam', { stages: stageList(unused('team')) }));
+    var ignored = [];
+    r.steps.forEach(function (x) { ignored = ignored.concat(x.ignored); });
+    if (ignored.length) notes.push(t('pasteIgnored', { headings: ignored.join(', ') }).trim());
+    if (notes.length) n.note = notes.join(' ');
+    return n;
+  }
+
+  /** What's left of a pasted session: waiting for the gate, or ready to fill now. */
+  function drawPending() {
+    var slot = refs.pending;
+    if (!slot) return;
+    slot.innerHTML = '';
+    var e = exploration();
+    if (!e) return;
+    // A part for a stage that has already passed can't be used anymore.
+    var parts = pendingParts().filter(function (p) { return S.d2s.lib.stageIndex(p.stage) >= e.index; });
+    if (parts.length !== pendingParts().length) setPending(parts);
+    if (!parts.length) return;
+    var ids = parts.map(function (p) { return p.stage; });
+    var ready = ids.some(function (id) { return S.d2s.lib.stageIndex(id) === e.index; });
+    slot.appendChild(h('div.pending',
+      h('p', ready ? t('pendingReady', { stages: stageList(ids) })
+        : t(ids.length > 1 ? 'pendingMany' : 'pendingOne', { stages: stageList(ids), stage: t('stages')[e.index] })),
+      h('div.actions',
+        ready ? h('button.primary', { type: 'button', onclick: function () { pasteSession(parts); } }, t('pendingFill', { stages: stageList(ids) })) : null,
+        h('button', { type: 'button', onclick: function () { setPending([]); drawPending(); } }, t('pendingDiscard'))
+      )
+    ));
+  }
+
   function drawPaste() {
     var slot = refs.paste;
     if (!slot) return;
@@ -631,7 +760,7 @@
       h('span.input-hint', t('pasteHint')),
       area,
       h('div.actions',
-        h('button.primary', { type: 'button', onclick: function () { pasteFromClaude(area.value); } }, t('pasteApply')),
+        h('button.primary', { type: 'button', onclick: function () { pasteFromAI(area.value); } }, t('pasteApply')),
         h('button', { type: 'button', onclick: function () { S.pasteOpen = false; drawPaste(); } }, t('cancel'))
       )
     ));
@@ -916,6 +1045,7 @@
     }
 
     refs.notice = h('div.notice-slot', { tabindex: '-1' });
+    refs.pending = h('div.pending-slot');
     refs.attach = h('div.attach-slot');
     refs.paste = h('div.paste-slot');
     refs.status = h('span.status', { 'aria-live': 'polite' });
@@ -928,6 +1058,7 @@
       h('p.muted.intro', intro),
       conflictsBox(),
       refs.notice,
+      current && !handoff ? refs.pending : null,
       current && !handoff ? refs.attach : null,
       current && !handoff ? refs.paste : null,
       body,
@@ -938,6 +1069,7 @@
       )
     );
     drawNotice();
+    drawPending();
     drawAttach();
     drawPaste();
     drawStatus();
@@ -972,7 +1104,8 @@
         return h('li', item.key && S.form
           ? h('button.link', { type: 'button', onclick: function () { S.form.focus(item.key); } }, item.text)
           : item.text);
-      })) : null
+      })) : null,
+      n.note ? h('p.note', n.note) : null
     ));
   }
 
@@ -1037,6 +1170,7 @@
     S.linked = info.linked || [];
     S.selection = info.selection || [];
     S.drafts = info.drafts || {};
+    S.pending = info.pending || {};
     S.settings = info.settings;
     if (S.settings && S.settings.token && S.settings.repo) connect(S.settings);
     else {

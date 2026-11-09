@@ -23,6 +23,7 @@ const KEY_SECTIONS = {
   he: {
     problem: 'הבעיה',
     who: 'למי זה חשוב',
+    where: 'איפה זה חי היום',
     outcome: 'מה רוצים שיקרה',
     appetite: 'מסגרת זמן',
     noGos: 'מה לא עושים',
@@ -36,10 +37,12 @@ const KEY_SECTIONS = {
     approvedBy: 'מי אישר',
     screens: 'מסכים וזרימה',
     criteria: 'קריטריוני קבלה',
+    components: 'רכיבים קיימים',
   },
   en: {
     problem: 'Problem',
     who: 'Who it matters to',
+    where: 'Where it lives today',
     outcome: 'Desired outcome',
     appetite: 'Appetite',
     noGos: 'No-gos',
@@ -53,6 +56,41 @@ const KEY_SECTIONS = {
     approvedBy: 'Approved by',
     screens: 'Screens and flow',
     criteria: 'Acceptance criteria',
+    components: 'Existing components',
+  },
+};
+
+// Sections that d2s 0.6.0 added to a stage's template ("Where it lives today") or made
+// required ("Existing components"), as KEY_SECTIONS keys. A document made from an older
+// template shows it: the section is missing, or its heading still says (optional).
+const SECTIONS_SINCE_0_6 = { frame: ['where'], spec: ['components'] };
+const SINCE_0_6_NOTE = ' (required since d2s 0.6.0, after this stage passed: add it the next time you edit this document)';
+
+// Fingerprints of every version of the design folder's files that d2s has shipped, by language.
+// "init --force" refreshes a copy that matches one (the team never edited it) and keeps any other.
+// When you change a template, add its new fingerprint at the end of its list: the tests print it.
+const SHIPPED = {
+  en: {
+    brief: ['dcp32epyhd', '2bmovkq9mgr'],
+    insights: ['1pjtxuem6xu'],
+    options: ['19uqgtuyaha', '2h79s239we'],
+    decision: ['1iu6xljrea6', 'v16pph42us'],
+    spec: ['1byqfzklp93', '1zjs0swdch6'],
+    handoff: ['1u5loru772g'],
+    summary: ['2bx29e738gd', '1o0goxndum8', '1l1qauqnil1'],
+    readme: ['1ocpp69syqz', '215k1swi42v', '2cl0sqlhvh9'],
+    context: ['c874nk4j8v', '2f4dts6m4n0'],
+  },
+  he: {
+    brief: ['1s06aeswo7g', '11ij0psdsge'],
+    insights: ['1msntg54meq'],
+    options: ['3npmgca83', '1ffzmto0xwm'],
+    decision: ['k77qvn4609', 'wveqv7lqdb'],
+    spec: ['guwb2d5u8i', '162jelzjx1w'],
+    handoff: ['txs9ze2dts'],
+    summary: ['1szlms16s2a', '2yvnesawzl', '1g3cdevzsnq'],
+    readme: ['2dvjil7j9eg', 'wckmvav7xo', 'opuqxdzrq3'],
+    context: ['md2k4an8u5', '1l1vx5inqd'],
   },
 };
 
@@ -101,6 +139,25 @@ function render(template, vars) {
   return template.replace(/\{\{(\w+)\}\}/g, (match, key) =>
     Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : match,
   );
+}
+
+/**
+ * A short fingerprint of a text, the same in Node and in the browser (cyrb53, a public-domain
+ * 53-bit hash). Line endings and trailing whitespace don't count, so a copy that git or an
+ * editor touched still matches.
+ */
+function fingerprint(text) {
+  const s = String(text).replace(/\r\n?/g, '\n').replace(/\s+$/, '');
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
 function today() {
@@ -251,6 +308,11 @@ function getTemplate(ctx, name) {
 
 function packagedTemplate(lang, name) {
   return readText(path.join(PKG_ROOT, 'templates', lang, `${name}.md`));
+}
+
+/** True when `text` is a version of templates/<lang>/<name>.md that d2s shipped, unchanged. */
+function isShipped(lang, name, text) {
+  return ((SHIPPED[lang] || {})[name] || []).includes(fingerprint(text));
 }
 
 // ---------- explorations ----------
@@ -468,9 +530,10 @@ function checkApprovals(content, settings) {
  * Returns `errors` and `warnings` as printable lines, and `issues` with the
  * section each problem belongs to, for interfaces that show it next to a field.
  * `legacyApprovals` turns approval-format problems into warnings, for decisions
- * that passed the gate before d2s 0.2.0.
+ * that passed the gate before d2s 0.2.0. `legacySections` is for a stage that already
+ * passed: a section that 0.6.0 added only warns while the document predates it.
  */
-function checkStageDoc(ctx, exp, stage, { legacyApprovals = false } = {}) {
+function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySections = false } = {}) {
   const issues = [];
   const add = (level, section, code, message) => issues.push({ level, section, code, message });
   const file = path.join(exp.dir, stage.file);
@@ -493,11 +556,16 @@ function checkStageDoc(ctx, exp, stage, { legacyApprovals = false } = {}) {
 
   const docSections = parseSections(body);
   const templateSections = parseSections(parseFrontMatter(getTemplate(ctx, stage.template)).body);
+  const since06 = legacySections ? (SECTIONS_SINCE_0_6[stage.id] || []).map((k) => normalizeHeading(KEY_SECTIONS[ctx.lang][k])) : [];
   for (const t of templateSections) {
     if (t.optional) continue;
     const s = findSection(docSections, t.heading);
-    if (!s) add('error', t.heading, 'missing', `missing section "${t.heading}"`);
-    else if (!s.content) add('error', t.heading, 'empty', `section "${t.heading}" is empty`);
+    // A document made before 0.6.0 has no such section, or has it as "(optional)".
+    const older = since06.includes(t.key) && (!s || s.optional);
+    const level = older ? 'warning' : 'error';
+    const note = older ? SINCE_0_6_NOTE : '';
+    if (!s) add(level, t.heading, 'missing', `missing section "${t.heading}"${note}`);
+    else if (!s.content) add(level, t.heading, 'empty', `section "${t.heading}" is empty${note}`);
   }
 
   if (stage.id === 'options' && figmaLinks(body).length === 0) {
@@ -540,7 +608,9 @@ function checkExploration(ctx, exp, { strict = false } = {}) {
     if (i > current) return;
     // Decisions that passed the gate before 0.2.0 carry no "decided" date; their approvals only warn.
     const legacyApprovals = stage.id === 'decide' && i < current && !exp.decided;
-    const r = checkStageDoc(ctx, exp, stage, { legacyApprovals });
+    // A stage that passed before 0.6.0 may lack the sections 0.6.0 added; its document shows it.
+    const legacySections = i < current;
+    const r = checkStageDoc(ctx, exp, stage, { legacyApprovals, legacySections });
     if (i < current || strict) errors.push(...r.errors);
     else warnings.push(...r.errors.map((e) => `${e} (in progress)`));
     warnings.push(...r.warnings);
@@ -555,6 +625,7 @@ module.exports = {
   STAGES,
   ARCHIVED,
   KEY_SECTIONS,
+  SECTIONS_SINCE_0_6,
   ROLES,
   DEFAULT_APPROVALS,
   UserError,
@@ -564,6 +635,7 @@ module.exports = {
   writeFileSafe,
   render,
   today,
+  fingerprint,
   slugify,
   parseFrontMatter,
   setFrontMatterField,
@@ -577,6 +649,8 @@ module.exports = {
   loadContext,
   getTemplate,
   packagedTemplate,
+  SHIPPED,
+  isShipped,
   listExplorations,
   readExploration,
   nextNumber,

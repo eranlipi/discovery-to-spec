@@ -141,9 +141,10 @@
           <p class="dz-step"></p>
           <p class="dz-intro"></p>
           <div class="dz-notice" tabindex="-1" role="status" hidden></div>
+          <div class="dz-pending" hidden></div>
           <div class="dz-paste" hidden>
-            <label for="dz-paste-text" class="dz-paste-title" data-i18n="sandbox.pasteTitle">Paste the document your AI assistant wrote for this stage</label>
-            <p class="field-help" data-i18n="sandbox.pasteHint">Each “## heading” fills the field with the same name. Fields without a matching heading stay as they are.</p>
+            <label for="dz-paste-text" class="dz-paste-title" data-i18n="sandbox.pasteTitle">Paste the document your AI assistant wrote</label>
+            <p class="field-help" data-i18n="sandbox.pasteHint">Each “## heading” fills the field with the same name, and other fields stay as they are. A discovery session’s document, with “# Frame”, “# Research” and “# Options”, fills each stage in turn and runs the gate between them.</p>
             <textarea id="dz-paste-text" rows="8" dir="auto"></textarea>
             <div class="dz-paste-actions">
               <button type="button" class="btn primary dz-paste-apply" data-i18n="sandbox.pasteApply">Fill the fields</button>
@@ -169,7 +170,7 @@
         </aside>
       </div>
     </div>
-    <p class="note" data-i18n="sandbox.designerNote">Every field is a <code dir="ltr">##</code> heading in the template, and its guidance note is the helper text. <b>Use example text</b> fills empty fields with a sample. In a real project, your team writes them and real people approve.</p>
+    <p class="note" data-i18n="sandbox.designerNote">Every field is a <code dir="ltr">##</code> heading in the template, and its guidance note is the helper text. <b>Use example text</b> fills empty fields with a sample. <b>Paste from AI</b> takes one stage’s document, or a whole discovery session: Frame and Research go through the gate, and Options waits for design. In a real project, your team writes them and real people approve.</p>
   </div>
   <div role="tabpanel" id="panel-developer" aria-labelledby="tab-developer" hidden>
     <div class="sandbox">
@@ -207,11 +208,12 @@
   <h2 id="assistant-title" class="sec"><span class="sec-num" dir="ltr">04</span><span data-i18n="assistant.title">An AI assistant for the thinking</span></h2>
   <p class="intro" data-i18n="assistant.intro">Development got fast. The thinking before it is now the slow part. The d2s assistant works in the chat you already use, Claude, ChatGPT or Gemini, and gets you to “what should we build” faster, without skipping the thinking.</p>
   <div class="grid3">
-    <div><h3 data-i18n="assistant.p1">Frames the problem</h3><p data-i18n="assistant.p1t">Asks the right questions, and pushes back when a request arrives as a solution.</p></div>
+    <div><h3 data-i18n="assistant.p1">Frames the problem</h3><p data-i18n="assistant.p1t">Asks the right questions, pushes back when a request arrives as a solution, and asks where it lives in your product today.</p></div>
     <div><h3 data-i18n="assistant.p2">Makes sense of research</h3><p data-i18n="assistant.p2t">Turns raw interview notes, tickets and data into insights with evidence and a confidence level. Quotes stay word for word, and names come out.</p></div>
-    <div><h3 data-i18n="assistant.p3">Lays out real directions</h3><p data-i18n="assistant.p3t">Two to four genuinely different directions, then the decision and the spec.</p></div>
+    <div><h3 data-i18n="assistant.p3">Lays out real directions</h3><p data-i18n="assistant.p3t">Two to four genuinely different directions, each with what it changes in the product. Then the decision and the spec.</p></div>
   </div>
-  <p class="note" data-i18n="assistant.rules">It never invents research and never approves for anyone. Each stage ends with a document that has your team’s headings, and <b>Paste from AI</b> in d2s fills the form from it.</p>
+  <p class="assist-session" data-i18n="assistant.session"><b>One discovery session.</b> Bring a new request, and the assistant takes it through the problem, the evidence and the directions in one conversation. It ends with one document: <b>Paste from AI</b> fills Frame, Research and Options in turn, and the gate checks each. Options stays open for design to add the frames, and the decision stays with the team.</p>
+  <p class="note" data-i18n="assistant.rules">It never invents research, quotes or Figma links, and never approves for anyone. Paste your <code dir="ltr">design/context.md</code> and it works from your product, users, design principles and design system. Each stage ends with a document that has your team’s headings, and <b>Paste from AI</b> in d2s fills the form from it.</p>
 
   <div class="tabs assist-tabs" role="tablist" aria-label="Set up the assistant">
     <button type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true" dir="ltr">Claude</button>
@@ -254,7 +256,7 @@
   <div class="assist-try">
     <div>
       <h3 data-i18n="assistant.tryTitle">Try it in two minutes</h3>
-      <p data-i18n="assistant.tryText">Copy our sample interview notes, paste them into the assistant and ask “What comes out of this?”. Then copy the document it writes. In the sandbox above, reach the research stage (Use example text, then Next stage) and choose <b>Paste from AI</b>.</p>
+      <p data-i18n="assistant.tryText">Copy our sample interview notes, paste them into the assistant and say “Run a discovery session: returning customers want to save their card.” Copy the document it ends with. In the sandbox above, choose <b>Paste from AI</b> and paste it: Frame and Research go through the gate, and Options waits for design.</p>
     </div>
     <button type="button" class="btn copy-btn" data-copy-key="notes" data-i18n="assistant.copyNotes">Copy sample notes</button>
   </div>
@@ -270,11 +272,11 @@
     <table>
       <thead><tr><th scope="col" data-i18n="stages.hStage">Stage</th><th scope="col" data-i18n="stages.hDoc">Document</th><th scope="col" data-i18n="stages.hHolds">What it holds</th><th scope="col" data-i18n="stages.hLed">Led by</th></tr></thead>
       <tbody>
-        <tr><td data-i18n="stages.s1">1. Frame</td><td><code dir="ltr">brief.md</code></td><td data-i18n="stages.s1h">The problem, who it matters to, the desired outcome, appetite and no-gos</td><td data-i18n="stages.s1l">Product</td></tr>
+        <tr><td data-i18n="stages.s1">1. Frame</td><td><code dir="ltr">brief.md</code></td><td data-i18n="stages.s1h">The problem, who it matters to, where it lives in the product today, the desired outcome, appetite and no-gos</td><td data-i18n="stages.s1l">Product</td></tr>
         <tr><td data-i18n="stages.s2">2. Research</td><td><code dir="ltr">insights.md</code></td><td data-i18n="stages.s2h">Insights with evidence and a confidence level</td><td data-i18n="stages.s2l">Design and product</td></tr>
-        <tr><td data-i18n="stages.s3">3. Options</td><td><code dir="ltr">options.md</code></td><td data-i18n="stages.s3h">2 to 4 directions with Figma links, pros and cons</td><td data-i18n="stages.s3l">Design</td></tr>
+        <tr><td data-i18n="stages.s3">3. Options</td><td><code dir="ltr">options.md</code></td><td data-i18n="stages.s3h">2 to 4 directions with Figma links, pros and cons, and what each changes in the product</td><td data-i18n="stages.s3l">Design</td></tr>
         <tr class="gate"><td data-i18n="stages.s4">4. Decide</td><td><code dir="ltr">decision.md</code></td><td data-i18n="stages.s4h">The chosen direction, what was rejected and why, who approved</td><td data-i18n="stages.s4l">Product, design and engineering</td></tr>
-        <tr><td data-i18n="stages.s5">5. Spec</td><td><code dir="ltr">spec.md</code></td><td data-i18n="stages.s5h">Screens, states, edge cases, acceptance criteria, accessibility</td><td data-i18n="stages.s5l">Design</td></tr>
+        <tr><td data-i18n="stages.s5">5. Spec</td><td><code dir="ltr">spec.md</code></td><td data-i18n="stages.s5h">Screens, states, edge cases, acceptance criteria, accessibility and the components used</td><td data-i18n="stages.s5l">Design</td></tr>
         <tr><td data-i18n="stages.s6">6. Handoff</td><td><code dir="ltr">handoff.md</code> <code dir="ltr">summary.md</code></td><td data-i18n="stages.s6h">Generated: for development, the chosen direction, its Figma links and the criteria; for design and product, the whole exploration on one page</td><td data-i18n="stages.s6l">Engineering, design and product</td></tr>
       </tbody>
     </table>
@@ -294,7 +296,7 @@
   <h2 id="principles-title" class="sec"><span class="sec-num" dir="ltr">07</span><span data-i18n="principles.title">Easy to say yes to</span></h2>
   <div class="grid4">
     <div><h3 data-i18n="principles.p1">MIT, no paid tier</h3><p data-i18n="principles.p1t">Free to use, change and ship, for teams of any size.</p></div>
-    <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 1,200 lines of plain Node.js. Your security team can read all of it.</p></div>
+    <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 1,300 lines of plain Node.js. Your security team can read all of it.</p></div>
     <div><h3 data-i18n="principles.p3">No telemetry</h3><p data-i18n="principles.p3t">It reads and writes Markdown files in your repository. The only network call is an opt-in CI check that asks GitHub who approved.</p></div>
     <div><h3 data-i18n="principles.p4">No new licenses</h3><p data-i18n="principles.p4t">Works with the GitHub and Figma you already have. AI agents are optional.</p></div>
   </div>
