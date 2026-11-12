@@ -1,5 +1,5 @@
-# Publishes a GitHub release for the version in package.json, with notes from CHANGELOG.md.
-# It runs on every push to master and does nothing when that version is already released,
+# Publishes the version in package.json: a GitHub release with notes from CHANGELOG.md,
+# and the package on npm. It runs on every push to master and skips whatever is already out,
 # so releasing is: bump "version" in package.json, add its CHANGELOG.md section, merge.
 # Pushing a v* tag, or running it from the Actions tab, works too.
 name: release
@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write # npm provenance and trusted publishing
 
 concurrency: release
 
@@ -22,7 +23,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          registry-url: https://registry.npmjs.org
       - name: Work out the tag
         id: tag
         run: |
@@ -33,12 +35,17 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           if gh release view "$tag" > /dev/null 2>&1; then
-            echo "$tag is already released. Nothing to do."
+            echo "$tag is already released on GitHub."
             echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          spec="$(node -p "const p = require('./package.json'); p.name + '@' + p.version")"
+          if npm view "$spec" version > /dev/null 2>&1; then
+            echo "$spec is already on npm."
+            echo "npm_skip=true" >> "$GITHUB_OUTPUT"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
-      - if: steps.tag.outputs.skip != 'true'
+      - if: steps.tag.outputs.skip != 'true' || steps.tag.outputs.npm_skip != 'true'
         run: npm test
       - if: steps.tag.outputs.skip != 'true'
         run: node .github/scripts/release-notes.mjs > notes.md
@@ -58,3 +65,12 @@ jobs:
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           GH_TOKEN: ${{ github.token }}
+      # Authenticates with npm trusted publishing (set up on npmjs.com for this repo and
+      # release.yml), or with an NPM_TOKEN repository secret when there is one.
+      - name: Publish to npm
+        if: steps.tag.outputs.npm_skip != 'true'
+        run: |
+          npm install -g npm@^11.5.1
+          npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

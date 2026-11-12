@@ -90,7 +90,7 @@ test('init creates the design folder, skills, AGENTS.md and config', () => {
     version: 1,
     lang: 'en',
     dir: 'design',
-    cli: 'npx github:eranlipi/discovery-to-spec',
+    cli: 'npx discovery-to-spec',
     approvals: { roles: ['product', 'design', 'engineering'], allowSamePerson: false, verify: 'none' },
   });
   const skill = read(repo, '.claude/skills/d2s-frame/SKILL.md');
@@ -114,12 +114,29 @@ test('init defaults to "npx d2s" when the package is installed in the project', 
   assert.match(ci, /- run: npm ci\n\s+- run: npx d2s check/, 'CI installs dependencies before running the local CLI');
 });
 
-test('the CI workflow runs straight from GitHub when the tool is not installed locally', () => {
+test('CI installs with pnpm or yarn when the project has their lockfile', () => {
+  for (const [lockfile, install] of [['pnpm-lock.yaml', 'pnpm install --frozen-lockfile'], ['yarn.lock', 'yarn install']]) {
+    const repo = tmpRepo();
+    fs.writeFileSync(path.join(repo, lockfile), '');
+    const installed = path.join(repo, 'node_modules', 'discovery-to-spec');
+    fs.mkdirSync(installed, { recursive: true });
+    for (const entry of ['bin', 'src', 'templates', 'integrations', 'package.json']) {
+      fs.cpSync(path.join(PKG_ROOT, entry), path.join(installed, entry), { recursive: true });
+    }
+    const r = runBin(path.join(installed, 'bin', 'd2s.js'), repo, 'init', '--ci');
+    assert.equal(r.code, 0, r.out);
+    const ci = read(repo, '.github/workflows/d2s-check.yml');
+    assert.match(ci, new RegExp(`- run: corepack enable\\n\\s+- run: ${install}\\n\\s+- run: npx d2s check`), lockfile);
+    assert.doesNotMatch(ci, /npm ci/, lockfile);
+  }
+});
+
+test('the CI workflow runs straight from npm when the tool is not installed locally', () => {
   const repo = tmpRepo();
   assert.equal(run(repo, 'init', '--ci').code, 0);
   const ci = read(repo, '.github/workflows/d2s-check.yml');
   assert.doesNotMatch(ci, /npm ci/);
-  assert.match(ci, /- run: npx github:eranlipi\/discovery-to-spec check/);
+  assert.match(ci, /- run: npx discovery-to-spec check/);
   assert.match(ci, /- "design\/\*\*"/);
 });
 
