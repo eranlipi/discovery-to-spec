@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1 (2026-11-12)
+
+On npm.
+
+- **Published to npm** as [`discovery-to-spec`](https://www.npmjs.com/package/discovery-to-spec). Install it with `npm i -D discovery-to-spec`, `pnpm add -D discovery-to-spec` or `yarn add -D discovery-to-spec`, or run it once with `npx discovery-to-spec init`. Installing from GitHub still works.
+- When the tool isn't installed in the project, `d2s init` now writes `npx discovery-to-spec` as the command, instead of `npx github:eranlipi/discovery-to-spec`. Repositories set up earlier keep their command; change `"cli"` in `.d2s.json` to switch.
+- The CI check that `d2s init --ci` writes installs dependencies with pnpm or yarn when the project has their lockfile, not always `npm ci`.
+
 ## 0.6.0 (2026-11-09)
 
 One flow for product managers, and documents that ask how a feature fits the product.

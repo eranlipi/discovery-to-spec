@@ -10,7 +10,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.6.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.6.1, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -36,21 +36,35 @@ See [`examples/checkout`](examples/checkout) for a complete, fictional feature t
 
 ## Install
 
-Requires Node.js 18 or later. The package isn't on npm yet, so install it from GitHub.
+Requires Node.js 18 or later. The package is on npm as [`discovery-to-spec`](https://www.npmjs.com/package/discovery-to-spec).
+
+Recommended: add it to your project, so everyone runs the same version.
 
 ```bash
-# Recommended: add it to your project, so everyone runs the same version
-npm i -D github:eranlipi/discovery-to-spec
+# npm
+npm i -D discovery-to-spec
 npx d2s init
 
-# Or run it once without adding it to the project
-npx github:eranlipi/discovery-to-spec init
+# pnpm
+pnpm add -D discovery-to-spec
+pnpm d2s init
 
-# No network access? Download or clone this repository, then
-node path/to/discovery-to-spec/bin/d2s.js init
+# yarn
+yarn add -D discovery-to-spec
+yarn d2s init
 ```
 
-To pin a version, install a tag: `npm i -D github:eranlipi/discovery-to-spec#v0.6.0`.
+Or run it once without adding it to the project:
+
+```bash
+npx discovery-to-spec init
+pnpm dlx discovery-to-spec init
+yarn dlx discovery-to-spec init    # yarn 2+
+```
+
+No network access? Download or clone this repository, then run `node path/to/discovery-to-spec/bin/d2s.js init`.
+
+To pin a version, add it to the name: `npm i -D discovery-to-spec@0.6.1`. Installing straight from GitHub still works too: `npm i -D github:eranlipi/discovery-to-spec#v0.6.0`.
 
 ## Quick start
 
@@ -217,7 +231,6 @@ Your repo keeps its own copies of the templates, so a new d2s version doesn't ch
 - A GitHub Action, so explorations can be started and advanced from the Actions tab with no terminal at all.
 - The Figma plugin's next steps: sign-in with a GitHub App, a pull request per exploration, and approvals as verified reviews.
 - GitHub issue forms for opening a brief without touching files.
-- Publishing to npm.
 - More languages.
 
 ## Website

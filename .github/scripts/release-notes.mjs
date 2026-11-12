@@ -13,5 +13,7 @@ if (start < 0) {
 let end = lines.findIndex((l, i) => i > start && /^## /.test(l));
 if (end < 0) end = lines.length;
 const body = lines.slice(start + 1, end).join('\n').trim().replace(/^### /gm, '## ');
-const repo = process.env.GITHUB_REPOSITORY || 'eranlipi/discovery-to-spec';
-process.stdout.write(`${body}\n\n## Install\n\n\`\`\`bash\nnpm i -D github:${repo}#v${version}\nnpx d2s init\n\`\`\`\n`);
+const { name } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+process.stdout.write(
+  `${body}\n\n## Install\n\n\`\`\`bash\nnpm i -D ${name}@${version}   # or: pnpm add -D / yarn add -D\nnpx d2s init\n\`\`\`\n`,
+);

@@ -9,9 +9,9 @@ const VERSION = require('../package.json').version;
 const TEMPLATE_NAMES = ['brief', 'insights', 'options', 'decision', 'spec', 'handoff', 'summary'];
 const STAGE_TEMPLATES = STAGES.filter((s) => s.id !== 'handoff').map((s) => s.template);
 const AGENTS = ['claude', 'cursor', 'agents-md'];
-const REMOTE_CLI = 'npx github:eranlipi/discovery-to-spec';
+const REMOTE_CLI = 'npx discovery-to-spec';
 
-/** "npx d2s" when installed in the project's node_modules, otherwise run straight from GitHub. */
+/** "npx d2s" when installed in the project's node_modules, otherwise run straight from npm. */
 function defaultCli(root) {
   const real = (p) => {
     try {
@@ -22,6 +22,14 @@ function defaultCli(root) {
   };
   const modules = real(path.join(root, 'node_modules')) + path.sep;
   return real(lib.PKG_ROOT).startsWith(modules) ? 'npx d2s' : REMOTE_CLI;
+}
+
+/** The CI steps that install a project's dependencies: pnpm or yarn when their lockfile is there, else npm. */
+function ciInstallSteps(root) {
+  const has = (f) => fs.existsSync(path.join(root, f));
+  if (has('pnpm-lock.yaml')) return '      - run: corepack enable\n      - run: pnpm install --frozen-lockfile\n';
+  if (has('yarn.lock')) return '      - run: corepack enable\n      - run: yarn install\n';
+  return '      - run: npm ci\n';
 }
 
 // ---------- output ----------
@@ -99,8 +107,9 @@ function init(flags) {
     if (unknown.length) throw new UserError(`Unknown agent "${unknown[0]}". Use: ${AGENTS.join(', ')}, or none.`);
   }
 
-  // A project-local install needs its dependencies in CI before "npx d2s" can run.
-  const ciInstall = cli === 'npx d2s' ? '      - run: npm ci\n' : '';
+  // A project-local install needs its dependencies in CI before "npx d2s" can run,
+  // installed with the package manager whose lockfile the project has.
+  const ciInstall = cli === 'npx d2s' ? ciInstallSteps(root) : '';
   const vars = { dir, cli, date: lib.today(), ciInstall };
   const results = [];
   const put = (rel, text, force = false) => results.push([lib.writeFileSafe(path.join(root, rel), text, force), rel]);
