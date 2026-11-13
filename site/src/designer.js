@@ -21,6 +21,8 @@
   var showFile = false;
   var finalDoc = 'summary'; // at the last stage: summary.md (design and product) or handoff.md (developers)
   var form = null;
+  var model = null; // the shown stage's fields; their values follow what's typed
+  var signoff = null; // the decision's "who approved" status, by role
   var revalidate = null;
   var pending = []; // parts of a pasted discovery session waiting for their stage: [{ stage, text }]
 
@@ -37,6 +39,9 @@
     preview: $('.dz-preview'),
     docs: $('.dz-docs'),
     actions: $('.dz-actions'),
+    helpers: $('.dz-helpers'),
+    progressText: $('.dz-progress-text'),
+    progressBar: $('.dz-progress-bar span'),
     next: $('.dz-next'),
     example: $('.dz-example'),
     toggle: $('.dz-toggle'),
@@ -312,8 +317,19 @@
     var names = t('dzStages');
     var shown = view === null ? s.index : view;
     lib.STAGES.forEach(function (stage, i) {
+      var gate = stage.id === 'decide';
+      if (gate) {
+        // The decision gate sits between the directions and the spec.
+        var line = document.createElement('li');
+        line.className = 'dz-gate-line';
+        line.setAttribute('aria-hidden', 'true');
+        var lineLabel = document.createElement('span');
+        lineLabel.textContent = t('dzGateLabel');
+        line.appendChild(lineLabel);
+        els.rail.appendChild(line);
+      }
       var li = document.createElement('li');
-      li.className = i < s.index ? 'done' : i === s.index ? 'current' : 'todo';
+      li.className = (i < s.index ? 'done' : i === s.index ? 'current' : 'todo') + (gate ? ' gate' : '');
       var b = document.createElement('button');
       b.type = 'button';
       b.disabled = i > s.index;
@@ -332,6 +348,12 @@
       file.textContent = stage.file;
       b.appendChild(mark);
       b.appendChild(label);
+      if (gate) {
+        var hint = document.createElement('span');
+        hint.className = 'sr-only';
+        hint.textContent = ', ' + t('dzGateLabel');
+        label.appendChild(hint);
+      }
       b.appendChild(file);
       b.addEventListener('click', function () {
         view = i === s.index ? null : i;
@@ -386,6 +408,52 @@
     els.fileText.textContent = D2S.read(path);
   }
 
+  /** Which required roles have someone's name on the decision, as rows under "Approved by". */
+  function drawSignoff(s, value) {
+    if (!signoff) return;
+    var parsed = lib.parseApprovalLines(value || '');
+    signoff.innerHTML = '';
+    s.ctx.config.approvals.roles.forEach(function (role) {
+      var key = lib.roleKey(role);
+      var who = parsed.filter(function (p) { return p.ok && p.roleKey === key && p.name.trim(); })[0];
+      var li = document.createElement('li');
+      li.className = who ? 'signed' : 'waiting';
+      var mark = document.createElement('span');
+      mark.className = 'dz-signoff-mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = who ? '✓' : '';
+      var roleEl = document.createElement('span');
+      roleEl.className = 'dz-signoff-role';
+      roleEl.textContent = lib.roleLabel(key, lang);
+      var whoEl = document.createElement('span');
+      whoEl.className = 'dz-signoff-who';
+      whoEl.textContent = who ? who.name : t('dzWaiting');
+      li.appendChild(mark);
+      li.appendChild(roleEl);
+      li.appendChild(whoEl);
+      signoff.appendChild(li);
+    });
+  }
+
+  /** A required field counts once it has text; "Approved by" once every required role has a name. */
+  function drawProgress(s) {
+    if (!model) return;
+    var required = model.fields.filter(function (f) { return !f.optional; });
+    var filled = required.filter(function (f) {
+      if (f.key === approvalKey() && s.stage.id === 'decide') {
+        var parsed = lib.parseApprovalLines(f.value);
+        return s.ctx.config.approvals.roles.every(function (role) {
+          return parsed.some(function (p) { return p.ok && p.roleKey === lib.roleKey(role); });
+        });
+      }
+      return !!f.value.trim();
+    }).length;
+    var done = filled === required.length;
+    els.progressText.textContent = done ? t('dzProgressDone') : t('dzProgress', { n: filled, total: required.length });
+    els.progressBar.style.width = (required.length ? Math.round((filled / required.length) * 100) : 100) + '%';
+    els.actions.classList.toggle('ready', done);
+  }
+
   function render() {
     var s = state();
     var shownIndex = view === null ? s.index : view;
@@ -414,8 +482,12 @@
       b.setAttribute('aria-pressed', String(b.getAttribute('data-doc') === finalDoc));
     });
     els.actions.hidden = !current || handoff;
+    els.helpers.hidden = !current || handoff;
     if (!current || handoff) els.paste.hidden = true;
+    els.main.classList.toggle('is-gate', stage.id === 'decide');
     form = null;
+    model = null;
+    signoff = null;
 
     if (handoff) {
       els.intro.textContent = t(finalDoc === 'summary' ? 'dzSummaryIntro' : 'dzHandoffIntro');
@@ -423,6 +495,7 @@
       if (!notice) notice = { kind: 'info', text: t('dzRestartHint') };
     } else {
       var m = Form.model(D2S.read(path), lib.getTemplate(s.ctx, stage.template));
+      if (current) model = m;
       els.intro.textContent = current ? m.intro : t('dzDone', { file: stage.file });
       form = Form.render(els.form, m, {
         readOnly: !current,
@@ -447,6 +520,8 @@
         onInput: function (field, value) {
           D2S.write(path, Form.setField(D2S.read(path), field.key, value, field.heading));
           drawFile(path);
+          if (field.key === approvalKey()) drawSignoff(s, value);
+          drawProgress(s);
           if (gateShown) {
             clearTimeout(revalidate);
             revalidate = setTimeout(showGaps, 250);
@@ -454,6 +529,21 @@
         },
       });
       if (gateShown && current) form.setIssues(gaps(s).byKey);
+      if (stage.id === 'decide') {
+        // The decision is the gate: who signed off, role by role, above the names.
+        var wrap = els.form.querySelector('.field[data-key="' + approvalKey().replace(/"/g, '\\"') + '"]');
+        if (wrap) {
+          wrap.classList.add('gate-field');
+          signoff = document.createElement('ul');
+          signoff.className = 'dz-signoff';
+          signoff.setAttribute('aria-label', t('dzSignoffLabel'));
+          var head = wrap.querySelector('.field-head');
+          head.parentNode.insertBefore(signoff, head.nextSibling);
+          var approved = m.fields.filter(function (f) { return f.key === approvalKey(); })[0];
+          drawSignoff(s, approved ? approved.value : '');
+        }
+      }
+      if (current) drawProgress(s);
     }
     drawNotice();
     drawPending(s, current && !handoff);

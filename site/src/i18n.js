@@ -51,7 +51,12 @@ window.D2S_I18N = {
       dzPendingMany: 'מהמסמך שהדבקתם, ממתינים לשער של "{stage}": {stages}.',
       dzPendingReady: 'מוכן מהמסמך שהדבקתם: {stages}.',
       dzPendingFill: 'למלא: {stages}',
-      dzPendingDiscard: 'למחוק'
+      dzPendingDiscard: 'למחוק',
+      dzGateLabel: 'שער ההחלטה',
+      dzSignoffLabel: 'מי אישר, לפי תפקיד',
+      dzWaiting: 'ממתין לאישור',
+      dzProgress: '{n} מתוך {total} שדות החובה מולאו',
+      dzProgressDone: 'כל שדות החובה מולאו'
     },
     skip: 'דילוג לתוכן',
     'nav.sandbox': 'ארגז חול',
@@ -87,16 +92,9 @@ window.D2S_I18N = {
     'install.tabNpx': 'הרצה חד-פעמית',
     'install.tabOffline': 'בלי רשת',
     'install.note': 'דרוש Node.js בגרסה 18 ומעלה, אצל מי שמריץ את הכלי. מוסיפים <code dir="ltr">--lang he</code> לתבניות בעברית.',
-    'install.upgrade': '<b>משדרגים ל-0.6?</b> מעדכנים את החבילה ומריצים <code dir="ltr">d2s init --force</code>. הוא מרענן את התבניות שלא שיניתם ושומר את אלה ששיניתם, עם רשימה של הסעיפים החדשים להוסיף להן. תהליכים שעברו מסגור או מפרט לפני השדרוג מציגים את הסעיפים החדשים כאזהרה ולא כשגיאה, כך שה-CI ממשיך לעבור. מעצבים מורידים את התוסף החדש ל-Figma מ<a href="https://github.com/eranlipi/discovery-to-spec/releases/tag/v0.6.0">דף הגרסה</a>, ואת <a href="#assistant">עוזר ה-AI</a> החדש למטה.',
+    'install.upgrade': '<b>משדרגים ל-0.6?</b> מעדכנים את החבילה ומריצים <code dir="ltr">d2s init --force</code>. הוא מרענן את התבניות שלא שיניתם ושומר את אלה ששיניתם, עם רשימה של הסעיפים החדשים להוסיף להן. תהליכים שעברו מסגור או מפרט לפני השדרוג מציגים את הסעיפים החדשים כאזהרה ולא כשגיאה, כך שה-CI ממשיך לעבור. מעצבים מורידים את התוסף החדש ל-Figma מ<a href="https://github.com/eranlipi/discovery-to-spec/releases/tag/v0.6.0">דף הגרסה</a>, ואת <a href="#assistant">עוזר ה-AI</a> החדש למעלה.',
 
-    'workflow.title': 'התהליך',
-    'workflow.frame': 'מגדירים את הבעיה: למי היא מפריעה, מה רוצים שיקרה, כמה זמן שווה להשקיע ומה לא עושים',
-    'workflow.research': 'הופכים ראיונות, פניות ונתונים לתובנות עם ראיות',
-    'workflow.options': 'פורסים 2 עד 4 כיוונים שונים באמת, כל אחד עם קישור ל-Figma',
-    'workflow.decide': 'בוחרים אחד ורושמים למה. רק אנשים מאשרים: מוצר, עיצוב ופיתוח, כל אחד בשמו.',
-    'workflow.spec': 'כל מסך, מצב ומקרה קצה, עם קריטריוני קבלה שאפשר לבדוק',
-    'workflow.handoff': 'מסמך אחד שנוצר לבד לפיתוח. כיוונים שנדחו לא נכנסים אליו.',
-    'workflow.note': 'פקודות ל-Claude Code ול-Cursor. אותו תהליך רץ גם מהטרמינל, עם <code dir="ltr">d2s new</code>, <code dir="ltr">d2s next</code> ו-<code dir="ltr">d2s status</code>.',
+    'workflow.note': 'פקודות <code dir="ltr">/d2s-</code> עובדות ב-Claude Code וב-Cursor. אותו תהליך רץ גם מהטרמינל, עם <code dir="ltr">d2s new</code>, <code dir="ltr">d2s next</code> ו-<code dir="ltr">d2s status</code>.',
 
     'sandbox.title': 'לנסות בדפדפן',
     'sandbox.intro': 'זה <code dir="ltr">d2s</code> האמיתי, שרץ בתוך הדף על פרויקט לדוגמה. מעצבים ממלאים טפסים ולוחצים "לשלב הבא"; מפתחים עובדים על אותם קבצים מהטרמינל. שום דבר לא מותקן ושום מידע לא יוצא מהדפדפן.',
@@ -157,7 +155,7 @@ window.D2S_I18N = {
 
     'stages.title': 'שישה מסמכים, שער אחד',
     'stages.hStage': 'שלב',
-    'stages.hDoc': 'מסמך',
+    'stages.hDoc': 'מסמך ופקודה',
     'stages.hHolds': 'מה הוא כולל',
     'stages.hLed': 'מי מוביל',
     'stages.s1': '1. מסגור',
@@ -258,7 +256,12 @@ window.D2S_I18N = {
       dzPendingMany: 'From your pasted document: {stages} are waiting until {stage} passes the gate.',
       dzPendingReady: 'Ready from your pasted document: {stages}.',
       dzPendingFill: 'Fill {stages}',
-      dzPendingDiscard: 'Discard'
+      dzPendingDiscard: 'Discard',
+      dzGateLabel: 'Decision gate',
+      dzSignoffLabel: 'Who approved, by role',
+      dzWaiting: 'waiting for approval',
+      dzProgress: '{n} of {total} required fields filled',
+      dzProgressDone: 'All required fields are filled'
     }
   }
 };
