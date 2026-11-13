@@ -27,8 +27,8 @@
     </a>
     <div class="nav-links">
       <a href="#sandbox" data-i18n="nav.sandbox">Sandbox</a>
-      <a href="#assistant" data-i18n="nav.assistant">AI assistant</a>
       <a href="#workflow" data-i18n="nav.workflow">Workflow</a>
+      <a href="#assistant" data-i18n="nav.assistant">AI assistant</a>
       <a href="https://github.com/eranlipi/discovery-to-spec#readme" data-i18n="nav.docs">Docs ↗</a>
       <a href="https://github.com/eranlipi/discovery-to-spec" data-i18n="nav.github">GitHub ↗</a>
       <div class="toggle" role="group" aria-label="Language">
@@ -86,42 +86,8 @@
   </figure>
 </section>
 
-<section id="install" class="wrap block" aria-labelledby="install-title">
-  <h2 id="install-title" class="sec"><span class="sec-num" dir="ltr">01</span><span data-i18n="install.title">Installation</span></h2>
-  <div class="tabs" role="tablist" aria-label="Install method">
-    <button type="button" role="tab" id="tab-npm" aria-controls="panel-npm" aria-selected="true" data-tab="npm" data-i18n="install.tabNpm">add to project</button>
-    <button type="button" role="tab" id="tab-npx" aria-controls="panel-npx" aria-selected="false" tabindex="-1" data-tab="npx" data-i18n="install.tabNpx">run once</button>
-    <button type="button" role="tab" id="tab-offline" aria-controls="panel-offline" aria-selected="false" tabindex="-1" data-tab="offline" data-i18n="install.tabOffline">offline</button>
-  </div>
-  <div class="panel" role="tabpanel" id="panel-npm" aria-labelledby="tab-npm">
-    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>npm i -D discovery-to-spec</code><button type="button" class="copy" data-copy="npm i -D discovery-to-spec" data-i18n="copy">copy</button></div>
-    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>npx d2s init</code><button type="button" class="copy" data-copy="npx d2s init" data-i18n="copy">copy</button></div>
-  </div>
-  <div class="panel" role="tabpanel" id="panel-npx" aria-labelledby="tab-npx" hidden>
-    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>npx discovery-to-spec init</code><button type="button" class="copy" data-copy="npx discovery-to-spec init" data-i18n="copy">copy</button></div>
-  </div>
-  <div class="panel" role="tabpanel" id="panel-offline" aria-labelledby="tab-offline" hidden>
-    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>node path/to/discovery-to-spec/bin/d2s.js init</code><button type="button" class="copy" data-copy="node path/to/discovery-to-spec/bin/d2s.js init" data-i18n="copy">copy</button></div>
-  </div>
-  <p class="note" data-i18n="install.note">Requires Node.js 18 or later, for whoever runs the tool. Add <code dir="ltr">--lang he</code> for Hebrew templates.</p>
-  <p class="note" data-i18n="install.upgrade"><b>Upgrading to 0.6?</b> Update the package, then run <code dir="ltr">d2s init --force</code>. It refreshes the templates you haven’t changed and keeps the ones you have, with a list of the new sections to add to them. Explorations that passed Frame or Spec before the upgrade show the new sections as warnings, not errors, so CI keeps passing. Designers get the new Figma plugin from the <a href="https://github.com/eranlipi/discovery-to-spec/releases/tag/v0.6.0">release</a>, and the new <a href="#assistant">AI assistant</a> below.</p>
-</section>
-
-<section id="workflow" class="wrap block" aria-labelledby="workflow-title">
-  <h2 id="workflow-title" class="sec"><span class="sec-num" dir="ltr">02</span><span data-i18n="workflow.title">Workflow</span></h2>
-  <ol class="flow">
-    <li><code dir="ltr"><i>/d2s-</i>frame</code><span data-i18n="workflow.frame">frame the problem: who it hurts, the outcome you want, the appetite and the no-gos</span></li>
-    <li><code dir="ltr"><i>/d2s-</i>research</code><span data-i18n="workflow.research">turn interviews, tickets and data into insights with evidence</span></li>
-    <li><code dir="ltr"><i>/d2s-</i>options</code><span data-i18n="workflow.options">lay out 2 to 4 genuinely different directions, each linked to Figma</span></li>
-    <li class="gate"><code dir="ltr"><i>/d2s-</i>decide</code><span data-i18n="workflow.decide">choose one and record why. Only people approve: product, design and engineering, each by name.</span></li>
-    <li><code dir="ltr"><i>/d2s-</i>spec</code><span data-i18n="workflow.spec">every screen, state and edge case, with acceptance criteria you can test</span></li>
-    <li><code dir="ltr"><i>/d2s-</i>handoff</code><span data-i18n="workflow.handoff">one generated doc for development. Rejected directions stay out.</span></li>
-  </ol>
-  <p class="note" data-i18n="workflow.note">Slash commands for Claude Code and Cursor. The same flow runs from the terminal with <code dir="ltr">d2s new</code>, <code dir="ltr">d2s next</code> and <code dir="ltr">d2s status</code>.</p>
-</section>
-
 <section id="sandbox" class="wrap block" aria-labelledby="sandbox-title">
-  <h2 id="sandbox-title" class="sec"><span class="sec-num" dir="ltr">03</span><span data-i18n="sandbox.title">Try it in your browser</span></h2>
+  <h2 id="sandbox-title" class="sec"><span class="sec-num" dir="ltr">01</span><span data-i18n="sandbox.title">Try it in your browser</span></h2>
   <p class="intro" data-i18n="sandbox.intro">This is the real <code dir="ltr">d2s</code>, running inside this page on a sample project. Designers fill in forms and press Next stage; developers drive the same files from a terminal. Nothing is installed and nothing leaves your browser.</p>
   <div class="tabs view-tabs" role="tablist" aria-label="Sandbox view">
     <button type="button" role="tab" id="tab-designer" aria-controls="panel-designer" aria-selected="true" data-i18n="sandbox.tabDesigner">Designer</button>
@@ -141,6 +107,10 @@
         <div class="dz-main">
           <p class="dz-step"></p>
           <p class="dz-intro"></p>
+          <div class="dz-helpers">
+            <button type="button" class="tool-btn dz-example" data-i18n="sandbox.example">Use example text</button>
+            <button type="button" class="tool-btn dz-paste-toggle" data-i18n="sandbox.paste">Paste from AI</button>
+          </div>
           <div class="dz-notice" tabindex="-1" role="status" hidden></div>
           <div class="dz-pending" hidden></div>
           <div class="dz-paste" hidden>
@@ -159,9 +129,11 @@
           </div>
           <div class="dz-preview md" hidden></div>
           <div class="dz-actions">
+            <div class="dz-progress">
+              <span class="dz-progress-text" aria-live="polite"></span>
+              <span class="dz-progress-bar" aria-hidden="true"><span></span></span>
+            </div>
             <button type="button" class="btn primary dz-next" data-i18n="sandbox.next">Next stage</button>
-            <button type="button" class="btn dz-example" data-i18n="sandbox.example">Use example text</button>
-            <button type="button" class="btn dz-paste-toggle" data-i18n="sandbox.paste">Paste from AI</button>
           </div>
         </div>
         <aside class="dz-file" hidden>
@@ -205,8 +177,27 @@
   </div>
 </section>
 
+<section id="workflow" class="wrap block" aria-labelledby="workflow-title">
+  <h2 id="workflow-title" class="sec"><span class="sec-num" dir="ltr">02</span><span data-i18n="stages.title">Six docs, one gate</span></h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col" data-i18n="stages.hStage">Stage</th><th scope="col" data-i18n="stages.hDoc">Document and command</th><th scope="col" data-i18n="stages.hHolds">What it holds</th><th scope="col" data-i18n="stages.hLed">Led by</th></tr></thead>
+      <tbody>
+        <tr><td data-i18n="stages.s1">1. Frame</td><td><code dir="ltr">brief.md</code><span class="stage-cmd" dir="ltr">/d2s-frame</span></td><td data-i18n="stages.s1h">The problem, who it matters to, where it lives in the product today, the desired outcome, appetite and no-gos</td><td data-i18n="stages.s1l">Product</td></tr>
+        <tr><td data-i18n="stages.s2">2. Research</td><td><code dir="ltr">insights.md</code><span class="stage-cmd" dir="ltr">/d2s-research</span></td><td data-i18n="stages.s2h">Insights with evidence and a confidence level</td><td data-i18n="stages.s2l">Design and product</td></tr>
+        <tr><td data-i18n="stages.s3">3. Options</td><td><code dir="ltr">options.md</code><span class="stage-cmd" dir="ltr">/d2s-options</span></td><td data-i18n="stages.s3h">2 to 4 directions with Figma links, pros and cons, and what each changes in the product</td><td data-i18n="stages.s3l">Design</td></tr>
+        <tr class="gate"><td data-i18n="stages.s4">4. Decide</td><td><code dir="ltr">decision.md</code><span class="stage-cmd" dir="ltr">/d2s-decide</span></td><td data-i18n="stages.s4h">The chosen direction, what was rejected and why, who approved</td><td data-i18n="stages.s4l">Product, design and engineering</td></tr>
+        <tr><td data-i18n="stages.s5">5. Spec</td><td><code dir="ltr">spec.md</code><span class="stage-cmd" dir="ltr">/d2s-spec</span></td><td data-i18n="stages.s5h">Screens, states, edge cases, acceptance criteria, accessibility and the components used</td><td data-i18n="stages.s5l">Design</td></tr>
+        <tr><td data-i18n="stages.s6">6. Handoff</td><td><code dir="ltr">handoff.md</code> <code dir="ltr">summary.md</code><span class="stage-cmd" dir="ltr">/d2s-handoff</span></td><td data-i18n="stages.s6h">Generated: for development, the chosen direction, its Figma links and the criteria; for design and product, the whole exploration on one page</td><td data-i18n="stages.s6l">Engineering, design and product</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note" data-i18n="stages.note">Passing the gate adds a row to <code dir="ltr">design/decisions.md</code>, so nobody re-argues a decision six months later. If your repo uses OpenSpec, the handoff also drafts an OpenSpec change proposal.</p>
+  <p class="note" data-i18n="workflow.note">The <code dir="ltr">/d2s-</code> commands work in Claude Code and Cursor. The same flow runs from the terminal with <code dir="ltr">d2s new</code>, <code dir="ltr">d2s next</code> and <code dir="ltr">d2s status</code>.</p>
+</section>
+
 <section id="assistant" class="wrap block" aria-labelledby="assistant-title">
-  <h2 id="assistant-title" class="sec"><span class="sec-num" dir="ltr">04</span><span data-i18n="assistant.title">An AI assistant for the thinking</span></h2>
+  <h2 id="assistant-title" class="sec"><span class="sec-num" dir="ltr">03</span><span data-i18n="assistant.title">An AI assistant for the thinking</span></h2>
   <p class="intro" data-i18n="assistant.intro">Development got fast. The thinking before it is now the slow part. The d2s assistant works in the chat you already use, Claude, ChatGPT or Gemini, and gets you to “what should we build” faster, without skipping the thinking.</p>
   <div class="grid3">
     <div><h3 data-i18n="assistant.p1">Frames the problem</h3><p data-i18n="assistant.p1t">Asks the right questions, pushes back when a request arrives as a solution, and asks where it lives in your product today.</p></div>
@@ -268,26 +259,29 @@
   </details>
 </section>
 
-<section id="stages" class="wrap block" aria-labelledby="stages-title">
-  <h2 id="stages-title" class="sec"><span class="sec-num" dir="ltr">05</span><span data-i18n="stages.title">Six docs, one gate</span></h2>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th scope="col" data-i18n="stages.hStage">Stage</th><th scope="col" data-i18n="stages.hDoc">Document</th><th scope="col" data-i18n="stages.hHolds">What it holds</th><th scope="col" data-i18n="stages.hLed">Led by</th></tr></thead>
-      <tbody>
-        <tr><td data-i18n="stages.s1">1. Frame</td><td><code dir="ltr">brief.md</code></td><td data-i18n="stages.s1h">The problem, who it matters to, where it lives in the product today, the desired outcome, appetite and no-gos</td><td data-i18n="stages.s1l">Product</td></tr>
-        <tr><td data-i18n="stages.s2">2. Research</td><td><code dir="ltr">insights.md</code></td><td data-i18n="stages.s2h">Insights with evidence and a confidence level</td><td data-i18n="stages.s2l">Design and product</td></tr>
-        <tr><td data-i18n="stages.s3">3. Options</td><td><code dir="ltr">options.md</code></td><td data-i18n="stages.s3h">2 to 4 directions with Figma links, pros and cons, and what each changes in the product</td><td data-i18n="stages.s3l">Design</td></tr>
-        <tr class="gate"><td data-i18n="stages.s4">4. Decide</td><td><code dir="ltr">decision.md</code></td><td data-i18n="stages.s4h">The chosen direction, what was rejected and why, who approved</td><td data-i18n="stages.s4l">Product, design and engineering</td></tr>
-        <tr><td data-i18n="stages.s5">5. Spec</td><td><code dir="ltr">spec.md</code></td><td data-i18n="stages.s5h">Screens, states, edge cases, acceptance criteria, accessibility and the components used</td><td data-i18n="stages.s5l">Design</td></tr>
-        <tr><td data-i18n="stages.s6">6. Handoff</td><td><code dir="ltr">handoff.md</code> <code dir="ltr">summary.md</code></td><td data-i18n="stages.s6h">Generated: for development, the chosen direction, its Figma links and the criteria; for design and product, the whole exploration on one page</td><td data-i18n="stages.s6l">Engineering, design and product</td></tr>
-      </tbody>
-    </table>
+<section id="install" class="wrap block" aria-labelledby="install-title">
+  <h2 id="install-title" class="sec"><span class="sec-num" dir="ltr">04</span><span data-i18n="install.title">Installation</span></h2>
+  <div class="tabs" role="tablist" aria-label="Install method">
+    <button type="button" role="tab" id="tab-npm" aria-controls="panel-npm" aria-selected="true" data-tab="npm" data-i18n="install.tabNpm">add to project</button>
+    <button type="button" role="tab" id="tab-npx" aria-controls="panel-npx" aria-selected="false" tabindex="-1" data-tab="npx" data-i18n="install.tabNpx">run once</button>
+    <button type="button" role="tab" id="tab-offline" aria-controls="panel-offline" aria-selected="false" tabindex="-1" data-tab="offline" data-i18n="install.tabOffline">offline</button>
   </div>
-  <p class="note" data-i18n="stages.note">Passing the gate adds a row to <code dir="ltr">design/decisions.md</code>, so nobody re-argues a decision six months later. If your repo uses OpenSpec, the handoff also drafts an OpenSpec change proposal.</p>
+  <div class="panel" role="tabpanel" id="panel-npm" aria-labelledby="tab-npm">
+    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>npm i -D discovery-to-spec</code><button type="button" class="copy" data-copy="npm i -D discovery-to-spec" data-i18n="copy">copy</button></div>
+    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>npx d2s init</code><button type="button" class="copy" data-copy="npx d2s init" data-i18n="copy">copy</button></div>
+  </div>
+  <div class="panel" role="tabpanel" id="panel-npx" aria-labelledby="tab-npx" hidden>
+    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>npx discovery-to-spec init</code><button type="button" class="copy" data-copy="npx discovery-to-spec init" data-i18n="copy">copy</button></div>
+  </div>
+  <div class="panel" role="tabpanel" id="panel-offline" aria-labelledby="tab-offline" hidden>
+    <div class="cmd" dir="ltr"><span class="prompt">$</span><code>node path/to/discovery-to-spec/bin/d2s.js init</code><button type="button" class="copy" data-copy="node path/to/discovery-to-spec/bin/d2s.js init" data-i18n="copy">copy</button></div>
+  </div>
+  <p class="note" data-i18n="install.note">Requires Node.js 18 or later, for whoever runs the tool. Add <code dir="ltr">--lang he</code> for Hebrew templates.</p>
+  <p class="note" data-i18n="install.upgrade"><b>Upgrading to 0.6?</b> Update the package, then run <code dir="ltr">d2s init --force</code>. It refreshes the templates you haven’t changed and keeps the ones you have, with a list of the new sections to add to them. Explorations that passed Frame or Spec before the upgrade show the new sections as warnings, not errors, so CI keeps passing. Designers get the new Figma plugin from the <a href="https://github.com/eranlipi/discovery-to-spec/releases/tag/v0.6.0">release</a>, and the new <a href="#assistant">AI assistant</a> above.</p>
 </section>
 
 <section id="tools" class="wrap block" aria-labelledby="tools-title">
-  <h2 id="tools-title" class="sec"><span class="sec-num" dir="ltr">06</span><span data-i18n="tools.title">Compatibility</span></h2>
+  <h2 id="tools-title" class="sec"><span class="sec-num" dir="ltr">05</span><span data-i18n="tools.title">Compatibility</span></h2>
   <ul class="tools" dir="ltr">
     <li>Figma</li><li>GitHub</li><li>Claude</li><li>ChatGPT</li><li>Gemini</li><li>Claude Code</li><li>Cursor</li><li>Codex</li><li>GitHub Copilot</li><li>OpenSpec</li>
   </ul>
@@ -295,7 +289,7 @@
 </section>
 
 <section id="principles" class="wrap block" aria-labelledby="principles-title">
-  <h2 id="principles-title" class="sec"><span class="sec-num" dir="ltr">07</span><span data-i18n="principles.title">Easy to say yes to</span></h2>
+  <h2 id="principles-title" class="sec"><span class="sec-num" dir="ltr">06</span><span data-i18n="principles.title">Easy to say yes to</span></h2>
   <div class="grid4">
     <div><h3 data-i18n="principles.p1">MIT, no paid tier</h3><p data-i18n="principles.p1t">Free to use, change and ship, for teams of any size.</p></div>
     <div><h3 data-i18n="principles.p2">Zero dependencies</h3><p data-i18n="principles.p2t">About 1,300 lines of plain Node.js. Your security team can read all of it.</p></div>
@@ -305,7 +299,7 @@
 </section>
 
 <section id="faq" class="wrap block" aria-labelledby="faq-title">
-  <h2 id="faq-title" class="sec"><span class="sec-num" dir="ltr">08</span><span data-i18n="faq.title">Questions</span></h2>
+  <h2 id="faq-title" class="sec"><span class="sec-num" dir="ltr">07</span><span data-i18n="faq.title">Questions</span></h2>
   <div class="faq">
     <details><summary data-i18n="faq.q1">Do designers need a terminal?</summary><p data-i18n="faq.a1">No. Try the Designer view above: every stage is a form with a Next stage button, and it writes the same Markdown files the CLI does. The <a href="https://github.com/eranlipi/discovery-to-spec/blob/master/figma-plugin/README.md">Figma plugin</a> brings the same forms into Figma, and anyone can also edit the files on github.com.</p></details>
     <details><summary data-i18n="faq.q2">Does it replace OpenSpec?</summary><p data-i18n="faq.a2">No, it comes before it. OpenSpec starts once you know the change you want. discovery-to-spec helps you get there, and drafts an OpenSpec proposal when you do.</p></details>
