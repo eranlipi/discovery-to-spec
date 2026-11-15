@@ -4,6 +4,8 @@
 
 A few ideas borrowed from OpenSpec: a skill for thinking before Frame, JSON for agents, and an easier start.
 
+**Coming from 0.6:** 0.7.0 was released on GitHub but never reached npm, because the publish step failed. 0.8.0 includes everything in 0.7.0 (plug-and-play `init`, see 0.7.0 in CHANGELOG.md), so you upgrade once and run `d2s init --force` once.
+
 - **New: `/d2s-explore`.** A thinking partner for before Frame. It reads the product context, the decision log and past explorations, archived ones too, to bring up earlier work ("this was decided in 004-…"). It asks one question at a time and writes nothing without a yes. Not sure what the problem is? Explore. Know the problem? Frame.
 - **New: `--json` for `d2s status` and `d2s check`.** Exactly one JSON document on stdout, for agents and scripts:
   - each exploration's next step;
