@@ -16,7 +16,7 @@ Every feature or problem goes through six stages. Each stage leaves one short do
 - `explorations/` — one folder per feature, holding the documents of every stage.
 - `decisions.md` — the log of every decision made.
 - `context.md` — standing product context: the product, users, design principles and design system. The AI assistant and agents read it for every feature.
-- `templates/` — the templates. Adapt them to your team.
+- `templates/` (optional) — your own versions of the templates. Run `{{cli}} templates` to copy them here and adapt them; until then, d2s uses its built-in ones.
 
 ## No terminal needed
 

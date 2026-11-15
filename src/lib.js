@@ -78,7 +78,7 @@ const SHIPPED = {
     spec: ['1byqfzklp93', '1zjs0swdch6'],
     handoff: ['1u5loru772g'],
     summary: ['2bx29e738gd', '1o0goxndum8', '1l1qauqnil1'],
-    readme: ['1ocpp69syqz', '215k1swi42v', '2cl0sqlhvh9'],
+    readme: ['1ocpp69syqz', '215k1swi42v', '2cl0sqlhvh9', '23uzafk0ekf'],
     context: ['c874nk4j8v', '2f4dts6m4n0'],
   },
   he: {
@@ -89,7 +89,7 @@ const SHIPPED = {
     spec: ['guwb2d5u8i', '162jelzjx1w'],
     handoff: ['txs9ze2dts'],
     summary: ['1szlms16s2a', '2yvnesawzl', '1g3cdevzsnq'],
-    readme: ['2dvjil7j9eg', 'wckmvav7xo', 'opuqxdzrq3'],
+    readme: ['2dvjil7j9eg', 'wckmvav7xo', 'opuqxdzrq3', '2e3m0k9nbzb'],
     context: ['md2k4an8u5', '1l1vx5inqd'],
   },
 };

@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+Plug and play: `d2s init` sets up only what your team uses.
+
+- **Skills only for the AI tools you use.** `init` looks for Claude Code (`.claude/`, `CLAUDE.md`, or `~/.claude` on your computer) and Cursor (`.cursor/`, `.cursorrules`, or `~/.cursor`), and installs the skills there:
+  - Claude Code, or both tools: `.claude/skills/`. Cursor reads that folder too, so there's one copy and nothing shows up twice.
+  - Cursor only: `.cursor/skills/`, as real skills. Before, Cursor got slash commands in `.cursor/commands/`.
+  - Neither found: `.claude/skills/`, which works in both.
+  - `--agents` still decides on its own.
+- **`AGENTS.md` is no longer created by default.** If your repo has one, `init` adds the shared rules to it. Pass `--agents agents-md` to create one.
+- **No template copies.** A new repo gets `.d2s.json`, `design/README.md`, `design/context.md` and the skills, nothing more:
+  - The templates come with d2s and update when you upgrade it.
+  - `design/decisions.md` and `design/explorations/` are created when they're first needed.
+- **New: `d2s templates [name...]`** copies the built-in templates into `design/templates/` when you want to adapt them. d2s then uses your copies, as before.
+- **Upgrading:** run `d2s init --force`.
+  - It puts the skills in the right place and removes the `.cursor/commands/d2s-*` files earlier versions wrote. Your own commands are kept.
+  - Template copies you already have stay, and are refreshed if you haven't changed them.
+
 ## 0.6.1 (2026-11-12)
 
 On npm.
