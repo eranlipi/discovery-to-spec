@@ -206,6 +206,114 @@ test('d2s templates copies the built-in templates in, for a team that wants to a
   assert.match(r.out, /Unknown template "nope"\. Use: brief, insights/);
 });
 
+test('init ends with how to start in the AI tools it set up', () => {
+  const next = (out) => out.slice(out.indexOf('Next:'));
+
+  const claude = tmpRepo();
+  fs.writeFileSync(path.join(claude, 'CLAUDE.md'), '');
+  let out = next(run(claude, 'init').out);
+  assert.match(out, /1\. Fill design\/context\.md: the product, its users, design principles and design system\./);
+  assert.match(out, /2\. Start a feature in Claude Code: \/d2s-explore to think it through, or \/d2s-frame "Short name of the problem"\./);
+  assert.match(out, /Without an AI tool: npx discovery-to-spec new "Short name of the problem"/);
+  assert.doesNotMatch(out, /Restart Cursor/, 'Claude Code picks up new skills by itself');
+
+  const cursor = tmpRepo();
+  fs.mkdirSync(path.join(cursor, '.cursor'));
+  out = next(run(cursor, 'init').out);
+  assert.match(out, /Start a feature in Cursor:/);
+  assert.match(out, /Restart Cursor so it loads the new skills\./);
+
+  assert.match(next(run(tmpRepo(), 'init').out), /Start a feature in Claude Code or Cursor:/, 'the .claude/skills fallback serves both');
+
+  out = next(run(tmpRepo(), 'init', '--agents', 'none').out);
+  assert.match(out, /2\. Start a feature: npx discovery-to-spec new "Short name of the problem"/);
+  assert.doesNotMatch(out, /\/d2s-/, 'no skills, no slash commands');
+});
+
+test('init installs /d2s-explore, the read-only skill for before Frame', () => {
+  const repo = tmpRepo();
+  run(repo, 'init');
+  const skill = read(repo, '.claude/skills/d2s-explore/SKILL.md');
+  assert.match(skill, /^---\nname: d2s-explore\ndescription: /);
+  assert.doesNotMatch(skill, /\{\{\w+\}\}/, 'placeholders are rendered');
+  assert.match(skill, /npx discovery-to-spec status --all --json/);
+  assert.match(skill, /Write nothing without a clear yes/);
+  for (const name of ['d2s-frame', 'd2s-research', 'd2s-options', 'd2s-decide', 'd2s-spec']) {
+    assert.match(read(repo, `.claude/skills/${name}/SKILL.md`), /check <id> --strict --json/, `${name} reads the check as JSON`);
+  }
+});
+
+test('status --json and check --json print one JSON document, each problem with a fix', () => {
+  const repo = tmpRepo();
+  const json = (...args) => {
+    const r = run(repo, ...args);
+    return { code: r.code, body: JSON.parse(r.out) }; // throws if anything else is on stdout
+  };
+
+  let r = json('status', '--json');
+  assert.equal(r.code, 1, 'not initialized');
+  assert.deepEqual(r.body, { format: 1, ok: false, error: 'No .d2s.json found. Run "d2s init" in your repository first.' });
+
+  run(repo, 'init');
+  r = json('status', '--json');
+  assert.equal(r.code, 0);
+  assert.deepEqual(r.body, { format: 1, version: require('../package.json').version, lang: 'en', dir: 'design', explorations: [] });
+  assert.deepEqual(json('check', '--json').body, { format: 1, ok: true, summary: { errors: 0, warnings: 0 }, items: [] });
+
+  run(repo, 'new', 'Checkout drop-off', '--slug', 'checkout');
+  const [e] = json('status', '--json').body.explorations;
+  assert.equal(e.id, '001-checkout');
+  assert.equal(e.stage, 'frame');
+  assert.deepEqual(e.next, { action: 'fill', file: 'brief.md', skill: 'd2s-frame', command: 'npx discovery-to-spec next 001-checkout' });
+  const problem = e.issues.find((i) => i.section === 'Problem');
+  assert.deepEqual(problem, {
+    stage: 'frame',
+    level: 'warning',
+    section: 'Problem',
+    code: 'empty',
+    message: 'section "Problem" is empty',
+    file: 'design/explorations/001-checkout/brief.md',
+    fix: 'Write the "Problem" section. If it isn\'t known yet, ask the people who know instead of inventing it',
+    inProgress: true,
+  });
+
+  // The flag can come before the id: --json never takes the next word as its value.
+  r = json('status', '--json', '1');
+  assert.deepEqual(
+    r.body.exploration.stages.map((s) => `${s.id}:${s.status}`),
+    ['frame:current', 'research:todo', 'options:todo', 'decide:todo', 'spec:todo', 'handoff:todo'],
+  );
+
+  // The current stage is in progress: warnings, ok. With --strict, they are errors.
+  r = json('check', '--json');
+  assert.equal(r.code, 0);
+  assert.equal(r.body.ok, true);
+  assert.equal(r.body.summary.warnings, 6);
+  r = json('check', '1', '--strict', '--json');
+  assert.equal(r.code, 1);
+  assert.equal(r.body.ok, false);
+  assert.equal(r.body.summary.errors, 6);
+  assert.ok(r.body.items[0].issues.every((i) => i.level === 'error' && i.fix), 'every problem says how to fix it');
+
+  // Once the brief is filled: ready to pass the gate.
+  fill(exp(repo, '001-checkout', 'brief.md'));
+  assert.equal(json('status', '--json').body.explorations[0].next.action, 'next');
+  assert.equal(json('check', '1', '--strict', '--json').code, 0);
+
+  // A gate that can't be passed by an agent says so in its fix.
+  for (const f of ['insights.md', 'options.md']) {
+    run(repo, 'next', '1');
+    fill(exp(repo, '001-checkout', f));
+  }
+  run(repo, 'next', '1');
+  fill(exp(repo, '001-checkout', 'decision.md'), { 'Approved by': 'TBD' });
+  const approval = json('check', '1', '--strict', '--json').body.items[0].issues.find((i) => i.code === 'approval');
+  assert.match(approval.fix, /Never write an approval for someone/);
+
+  // Human output is unchanged.
+  assert.doesNotMatch(run(repo, 'status').out, /^\{/);
+});
+
 test('init defaults to "npx d2s" when the package is installed in the project', () => {
   const repo = tmpRepo();
   const installed = path.join(repo, 'node_modules', 'discovery-to-spec');

@@ -85,6 +85,10 @@ function table(rows, fit) {
 
 // ---------- args ----------
 
+// Flags that are on or off: they never take the next word as a value, so
+// "d2s status --json 001" means the exploration 001.
+const SWITCHES = new Set(['json', 'all', 'strict', 'force', 'ci', 'openspec', 'verify-approvals', 'help', 'version']);
+
 function parseArgs(argv) {
   const positional = [];
   const flags = {};
@@ -97,7 +101,7 @@ function parseArgs(argv) {
     if (a.startsWith('--')) {
       const [key, inline] = a.slice(2).split(/=(.*)/s);
       if (inline !== undefined) flags[key] = inline;
-      else if (argv[i + 1] !== undefined && !argv[i + 1].startsWith('--')) flags[key] = argv[++i];
+      else if (!SWITCHES.has(key) && argv[i + 1] !== undefined && !argv[i + 1].startsWith('--')) flags[key] = argv[++i];
       else flags[key] = true;
     } else if (a === '-h') flags.help = true;
     else if (a === '-v') flags.version = true;
@@ -197,8 +201,26 @@ function init(flags) {
   if (results.some((r) => r[2])) {
     log(`\nYour own templates were kept. Add the new sections to them by hand, or delete a template and run "${cli} init --force" again to get the new one.`);
   }
-  log(`\nNext:\n  ${cli} new "Short name of the problem"\n  Then fill ${dir}/explorations/<id>/brief.md (or run /d2s-frame in Claude Code or Cursor).`);
+  log(`\n${nextSteps(cli, dir, agents, skillsDir).join('\n')}`);
   return 0;
+}
+
+/** How init ends: what to fill first, and how to start a feature in the AI tools that got the skills. */
+function nextSteps(cli, dir, agents, skillsDir) {
+  const title = '"Short name of the problem"';
+  const lines = ['Next:', `  1. Fill ${dir}/context.md: the product, its users, design principles and design system.`];
+  if (!skillsDir) {
+    lines.push(`  2. Start a feature: ${cli} new ${title}`);
+    return lines;
+  }
+  // .claude/skills is read by Claude Code and Cursor alike; .cursor/skills only by Cursor.
+  const tools =
+    skillsDir === '.cursor/skills' ? 'Cursor' : agents.includes('claude') && !agents.includes('cursor') ? 'Claude Code' : 'Claude Code or Cursor';
+  lines.push(`  2. Start a feature in ${tools}: /d2s-explore to think it through, or /d2s-frame ${title}.`);
+  lines.push(`     Without an AI tool: ${cli} new ${title}`);
+  // Cursor loads skills when it starts; Claude Code picks them up as it goes.
+  if (agents.includes('cursor')) lines.push('  Restart Cursor so it loads the new skills.');
+  return lines;
 }
 
 /** What a newer packaged template asks for that the team's own version doesn't: new or newly required sections. */
@@ -312,6 +334,7 @@ function nextStep(ctx, exp) {
 
 function status(positional, flags) {
   const ctx = lib.loadContext();
+  if (flags.json) return statusJson(ctx, positional, flags);
   if (positional[0]) return statusOne(ctx, lib.resolveExploration(ctx, positional[0], { includeArchived: true }));
   const list = lib.listExplorations(ctx, { includeArchived: !!flags.all });
   if (!list.length) {
@@ -343,30 +366,85 @@ function statusOne(ctx, exp) {
   return 0;
 }
 
+// ---------- --json (for agents and scripts) ----------
+//
+// With --json, status and check print exactly one JSON document on stdout and nothing
+// else. "format" changes only when the shape changes in a way that breaks readers.
+
+const JSON_FORMAT = 1;
+
+function printJson(value) {
+  log(JSON.stringify({ format: JSON_FORMAT, ...value }, null, 2));
+}
+
+/** What to do next with an exploration: fill the stage's document, pass the gate, or build it. */
+function nextAction(ctx, exp) {
+  if (exp.archived) return null;
+  const cli = ctx.config.cli;
+  const i = lib.stageIndex(exp.stage);
+  if (i < 0) return { action: 'fix', file: 'brief.md', skill: null, command: null };
+  const stage = STAGES[i];
+  if (stage.id === 'handoff') return { action: 'build', file: stage.file, skill: stage.skill, command: `${cli} archive ${exp.id}` };
+  const gaps = lib.checkStageDoc(ctx, exp, stage).errors.length;
+  return { action: gaps ? 'fill' : 'next', file: stage.file, skill: stage.skill, command: `${cli} next ${exp.id}` };
+}
+
+function explorationJson(ctx, exp) {
+  const { issues } = lib.checkExploration(ctx, exp);
+  return { id: exp.id, title: exp.title, stage: exp.stage, archived: exp.archived, owner: exp.owner, next: nextAction(ctx, exp), issues };
+}
+
+function statusJson(ctx, positional, flags) {
+  const head = { version: VERSION, lang: ctx.lang, dir: ctx.config.dir };
+  if (positional[0]) {
+    const exp = lib.resolveExploration(ctx, positional[0], { includeArchived: true });
+    const current = exp.archived ? STAGES.length : lib.stageIndex(exp.stage);
+    const stages = STAGES.map((s, i) => ({ id: s.id, file: s.file, status: i < current ? 'done' : i === current ? 'current' : 'todo' }));
+    printJson({ ...head, exploration: { ...explorationJson(ctx, exp), stages } });
+    return 0;
+  }
+  const list = lib.listExplorations(ctx, { includeArchived: !!flags.all });
+  printJson({ ...head, explorations: list.map((e) => explorationJson(ctx, e)) });
+  return 0;
+}
+
+function checkJson(results, extra = {}) {
+  const count = (level) => results.reduce((n, r) => n + r.issues.filter((i) => i.level === level).length, 0);
+  const errors = count('error');
+  const items = results.map((r) => ({ id: r.exp.id, stage: r.exp.stage, issues: r.issues, ...(r.verified !== undefined ? { verified: r.verified } : {}) }));
+  printJson({ ok: errors === 0, summary: { errors, warnings: count('warning') }, ...extra, items });
+  return errors ? 1 : 0;
+}
+
 // ---------- check ----------
 
 function check(positional, flags) {
   const ctx = lib.loadContext();
+  const json = !!flags.json;
   const targets = positional[0] ? [lib.resolveExploration(ctx, positional[0])] : lib.listExplorations(ctx);
-  if (!targets.length) {
+  if (!targets.length && !json) {
     log('No explorations to check.');
     return 0;
   }
   const results = targets.map((exp) => ({ exp, ...lib.checkExploration(ctx, exp, { strict: !!flags.strict }) }));
   if (flags['verify-approvals']) {
     if (ctx.config.approvals.verify !== 'github-pr') {
-      log(c.dim('Approval verification is off. To turn it on, set "approvals": { "verify": "github-pr" } in .d2s.json.'));
+      const note = 'Approval verification is off. To turn it on, set "approvals": { "verify": "github-pr" } in .d2s.json.';
+      if (json) return checkJson(results, { note });
+      log(c.dim(note));
     } else {
       const pr = pullRequest(flags);
       return verifyApprovals(ctx, results, pr, { explicit: !!positional[0], strict: !!flags.strict })
-        .then(() => report(results, pr))
+        .then(() => (json ? checkJson(results, { pullRequest: Number(pr.number) }) : report(results, pr)))
         .catch((err) => {
-          bad(`Could not verify approvals on GitHub: ${err.message}`);
+          const message = `Could not verify approvals on GitHub: ${err.message}`;
+          if (json) printJson({ ok: false, error: message });
+          else bad(message);
           return 1;
         });
     }
   }
-  return report(results);
+  return json ? checkJson(results) : report(results);
 }
 
 function report(results, pr) {
@@ -454,12 +532,17 @@ async function verifyApprovals(ctx, results, pr, { explicit, strict }) {
     const decision = path.join(r.exp.dir, 'decision.md');
     const rel = decisionPath(r);
     const inProgress = r.exp.stage === 'decide' && !strict;
-    const add = (message) => (inProgress ? r.warnings : r.errors).push(`${rel}: ${message}${inProgress ? ' (in progress)' : ''}`);
+    const section = KEY_SECTIONS[ctx.lang].approvedBy;
+    const add = (message, fix) => {
+      (inProgress ? r.warnings : r.errors).push(`${rel}: ${message}${inProgress ? ' (in progress)' : ''}`);
+      const level = inProgress ? 'warning' : 'error';
+      r.issues.push({ level, stage: 'decide', section, code: 'github-approval', message, file: rel, fix, ...(inProgress ? { inProgress } : {}) });
+    };
     r.verified = 0;
-    for (const a of lib.parseApprovalLines(lib.sectionContent(decision, KEY_SECTIONS[ctx.lang].approvedBy))) {
+    for (const a of lib.parseApprovalLines(lib.sectionContent(decision, section))) {
       if (!a.ok) continue; // the format check reports it
-      if (!a.handle) add(t.handle(a.name));
-      else if (latest.get(a.handle.slice(1).toLowerCase()) !== 'APPROVED') add(t.notApproved(a.handle));
+      if (!a.handle) add(t.handle(a.name), 'Add the GitHub handle of the person who approved (like @name) to their line');
+      else if (latest.get(a.handle.slice(1).toLowerCase()) !== 'APPROVED') add(t.notApproved(a.handle), `Ask ${a.handle} to approve the pull request on GitHub`);
       else r.verified++;
     }
   }
@@ -668,8 +751,11 @@ Usage: d2s <command> [options]
       --owner <name>      Who leads it
   status [id]           List explorations, or show one stage by stage
       --all               Include archived explorations
+      --json              One JSON document, for agents and scripts: each exploration's
+                          next step and its problems, each with a fix
   check [id]            Validate documents (exit code 1 on errors, for CI)
       --strict            Treat the current stage's gaps as errors too
+      --json              One JSON document: ok, a summary, and every problem with a fix
       --verify-approvals  With approvals.verify "github-pr": check that everyone in
                           "Approved by" approved the pull request (needs GITHUB_TOKEN)
       --pr <n>, --repo <owner/name>   The pull request, outside GitHub Actions
@@ -721,7 +807,9 @@ function main(argv) {
     }
   } catch (err) {
     if (err instanceof UserError) {
-      bad(err.message);
+      // With --json, even a failure is one JSON document, so a script can always parse the output.
+      if (flags.json && (command === 'status' || command === 'check')) printJson({ ok: false, error: err.message });
+      else bad(err.message);
       return 1;
     }
     throw err;

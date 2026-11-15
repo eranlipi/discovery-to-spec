@@ -301,6 +301,9 @@ html[lang="he"] .dz-step { text-transform: none; letter-spacing: 0; }
 .steps li { padding-inline-start: 4px; }
 .steps a { color: var(--accent); overflow-wrap: anywhere; }
 .copy-btn { margin-top: 16px; cursor: pointer; }
+.setup { margin-top: 28px; max-width: 46em; }
+.setup .note { margin-top: 0; }
+.setup-prompt { margin: 12px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); font: 400 13px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; text-align: start; }
 .copy-row { display: flex; flex-wrap: wrap; gap: 0 10px; }
 .assist-session { margin: 18px 0 0; padding: 14px 16px; border-inline-start: 3px solid var(--accent); background: var(--surface); max-width: 52em; }
 .assist-try { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 22px; padding: 18px 22px; max-width: 860px; border: 1px dashed var(--accent); border-radius: 10px; }

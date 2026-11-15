@@ -5,7 +5,7 @@ description: Stage 5 (spec) of a discovery-to-spec design exploration. Turns the
 
 # d2s: spec (stage 5 of 6)
 
-Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status` and ask which one.
+Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status --json` and ask which one.
 
 1. Read `.d2s.json` and write in its `lang`. Read `{{dir}}/context.md`, then `decision.md`, and spec only the approved direction. If `decision.md` has no approval, stop and say so.
 2. If the Figma MCP server is available, read every linked frame, and the current screens linked under "Where it lives today" in the brief. List the screens in flow order, each with its frame link.
@@ -14,4 +14,4 @@ Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status` an
 5. Write one acceptance criterion per behavior, in the template's format (Given / When / Then, or בהינתן / כאשר / אז in Hebrew). Each one must be testable.
 6. Fill "Existing components": the design-system components the screens reuse, with a link to the Figma library or Storybook, and any new component with the reason it is needed. If the Figma MCP server is available, search the team's design-system library (and the repo's Code Connect mappings or Storybook, if any) and prefer existing components.
 7. Record anything undecided as an open question; never invent behavior.
-8. Run `{{cli}} check <id>`. Next step: `{{cli}} next <id>`, which generates `handoff.md`.
+8. Run `{{cli}} check <id> --strict --json` and work through each issue's `fix` until `ok` is true. Next step: `{{cli}} next <id>`, which generates `handoff.md`.
