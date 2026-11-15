@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 (2026-11-15)
 
 Plug and play: `d2s init` sets up only what your team uses.
 
