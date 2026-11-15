@@ -10,7 +10,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.7.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.8.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -23,7 +23,7 @@ AI coding tools made building fast. What's slow now is everything before it: fra
 - **A decision log** (`design/decisions.md`) that fills itself, so nobody re-argues a decision six months later.
 - **A generated handoff** with the chosen direction, its Figma links and the acceptance criteria in one place. Rejected directions stay out. If your repo uses OpenSpec, it also drafts an OpenSpec change proposal.
 - **A one-page summary for design and product** (`summary.md`), generated with the handoff: the problem, what you learned, what you decided and why, what you didn't choose, who approved, and what's being built.
-- **Agent skills** for Claude Code and Cursor (`/d2s-frame` … `/d2s-handoff`), plus an `AGENTS.md` section for other agents. Agents help write and summarize; they're told never to invent research and never to approve decisions.
+- **Agent skills** for Claude Code and Cursor (`/d2s-explore` to think an idea through, then `/d2s-frame` … `/d2s-handoff`), plus an `AGENTS.md` section for other agents. Agents help write and summarize; they're told never to invent research and never to approve decisions.
 - **An optional CI check** for pull requests.
 
 See [`examples/checkout`](examples/checkout) for a complete, fictional feature that went through all six stages, or try the whole flow in the [sandbox on the website](https://discoverytospec.com/#sandbox). It runs the real CLI in your browser.
@@ -64,7 +64,22 @@ yarn dlx discovery-to-spec init    # yarn 2+
 
 No network access? Download or clone this repository, then run `node path/to/discovery-to-spec/bin/d2s.js init`.
 
-To pin a version, add it to the name: `npm i -D discovery-to-spec@0.7.0`. Installing straight from GitHub still works too: `npm i -D github:eranlipi/discovery-to-spec#v0.7.0`.
+To pin a version, add it to the name: `npm i -D discovery-to-spec@0.8.0`. Installing straight from GitHub still works too: `npm i -D github:eranlipi/discovery-to-spec#v0.8.0`.
+
+### Or let your AI assistant do it
+
+Open the repository in Claude Code, Cursor or another coding assistant, and paste this:
+
+```text
+Set up discovery-to-spec in this repository.
+
+1. Ask me whether we write our design documents in English or Hebrew. Then run `npx discovery-to-spec init`, adding `--lang he` for Hebrew. Show me each command before you run it, and change nothing else.
+2. Show me the files it created.
+3. Fill design/context.md with me. Ask one question at a time about the product, its users, our design principles and our design system (links to the Figma library, Storybook and tokens). Write only what I tell you.
+4. Run `npx discovery-to-spec status` and tell me how to start a feature: /d2s-explore to think an idea through, or /d2s-frame to write the brief.
+```
+
+The assistant installs d2s, shows you what it created, and fills in the product context with you, one question at a time.
 
 ## Quick start
 
@@ -96,8 +111,8 @@ The structure borrows from Shape Up (appetite, no-gos), continuous discovery (ev
 | `d2s init` | Creates the config, `design/README.md`, `design/context.md` and the agent skills for the AI tools it finds (see [AI agents](#ai-agents)). Options: `--lang en\|he`, `--dir`, `--agents claude,cursor,agents-md\|none`, `--cli`, `--ci`, `--force` (refreshes an initialized repo, see [refreshing templates](#refreshing-templates)) |
 | `d2s templates [name...]` | Copies the built-in templates into `design/templates/` so you can adapt them: all of them, or the ones you name (`brief spec`). Copies you already have are kept |
 | `d2s new "<title>"` | Starts an exploration. Options: `--slug`, `--owner` |
-| `d2s status [id]` | Lists explorations, or shows one stage by stage. `--all` includes archived ones |
-| `d2s check [id]` | Validates documents and exits with 1 on errors. Stages already passed must be complete; the current one may be in progress (`--strict` requires it too). `--verify-approvals` checks approvals against GitHub reviews (see below) |
+| `d2s status [id]` | Lists explorations, or shows one stage by stage. `--all` includes archived ones. `--json` prints one JSON document for agents and scripts: each exploration's next step and its problems, each with a `fix` |
+| `d2s check [id]` | Validates documents and exits with 1 on errors. Stages already passed must be complete; the current one may be in progress (`--strict` requires it too). `--verify-approvals` checks approvals against GitHub reviews (see below). `--json` prints one JSON document: `ok`, a summary, and every problem with a `fix` |
 | `d2s next <id>` | Validates the current stage and opens the next one. Passing the decision adds a row to the decision log; passing the spec generates the handoff and the summary |
 | `d2s handoff <id>` | Regenerates the handoff and the summary (and the OpenSpec draft). `--openspec` forces the draft |
 | `d2s archive <id>` | Moves a built exploration to `explorations/archive/` |
@@ -187,10 +202,11 @@ In the Figma plugin, the whole paste is saved as one commit, such as "001-checko
 
 ## AI agents
 
-`init` installs one skill per stage, only for the AI tools your team uses:
+`init` installs one skill per stage, plus `/d2s-explore`, only for the AI tools your team uses:
 
 | Command | Helps with |
 | --- | --- |
+| `/d2s-explore` | Thinking an idea through before committing to it: checks the decision log and past explorations for earlier work, asks one question at a time, and writes nothing without a yes. Not sure what the problem is? Explore. Know the problem? Frame |
 | `/d2s-frame` | Interviewing the requester and writing the brief, pushing back on solution-first requests and asking where it lives in the product today |
 | `/d2s-research` | Turning raw notes into insights with evidence, anonymizing personal data |
 | `/d2s-options` | Laying out genuinely different directions, each with what it changes in the product |
@@ -231,6 +247,8 @@ Templates ship in English (default) and Hebrew (`--lang he`, right to left). The
 ### Refreshing templates
 
 Without copies of your own, the templates come with d2s and update when you upgrade it. Copies in `design/templates/` (made with `d2s templates`, or by `init` before 0.7) don't change until you run `d2s init --force`. It refreshes every copy, plus `design/README.md` and `design/context.md`, that you haven't changed, and keeps the ones you have. For a template you've made your own, it lists the sections the new version adds, to copy in by hand. Your settings and the decision log are kept.
+
+**Upgrading to 0.8.** Run `d2s init --force` to add `/d2s-explore` and the skills that read `d2s check --json`.
 
 **Upgrading to 0.7.** Run `d2s init --force`. It puts the agent skills where your AI tools read them (see [AI agents](#ai-agents)), removes the `.cursor/commands/d2s-*` files that earlier versions wrote, and keeps your template copies: the ones you haven't changed are refreshed, as above. New repositories no longer get template copies, so their templates follow the d2s version until they run `d2s templates`. Nothing changes for designers: the Figma plugin and the AI assistant work as before.
 

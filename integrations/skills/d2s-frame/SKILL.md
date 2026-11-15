@@ -16,4 +16,4 @@ Input: $ARGUMENTS is a title for a new exploration or an existing exploration id
    - "Appetite" is a decision about how much time the problem is worth, not an estimate.
 4. Write only what the user told you. Never invent users, data, quotes, numbers or Figma links. Put unknowns under open questions.
 5. Keep the `##` headings unchanged, because `{{cli}} check` looks for them. The `<!-- -->` guidance comments can stay.
-6. Run `{{cli}} check <id>`. When it passes, tell the user the brief is ready, and that the next step is `{{cli}} next <id>` followed by `/d2s-research`.
+6. Run `{{cli}} check <id> --strict --json` and work through each issue's `fix` until `ok` is true. Then tell the user the brief is ready, and that the next step is `{{cli}} next <id>` followed by `/d2s-research`.

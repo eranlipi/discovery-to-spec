@@ -103,8 +103,18 @@
   <div class="panel" role="tabpanel" id="panel-offline" aria-labelledby="tab-offline" hidden>
     <div class="cmd" dir="ltr"><span class="prompt">$</span><code>node path/to/discovery-to-spec/bin/d2s.js init</code><button type="button" class="copy" data-copy="node path/to/discovery-to-spec/bin/d2s.js init" data-i18n="copy">copy</button></div>
   </div>
+  <div class="setup">
+    <p class="note" data-i18n="install.setup"><b>Or let your AI assistant do it.</b> Open the repository in Claude Code, Cursor or another coding assistant, and paste this. It installs d2s, shows you what it created, and fills in the product context with you, one question at a time.</p>
+    <pre id="setup-prompt" class="setup-prompt" dir="auto" data-i18n="install.setupPrompt">Set up discovery-to-spec in this repository.
+
+1. Ask me whether we write our design documents in English or Hebrew. Then run `npx discovery-to-spec init`, adding `--lang he` for Hebrew. Show me each command before you run it, and change nothing else.
+2. Show me the files it created.
+3. Fill design/context.md with me. Ask one question at a time about the product, its users, our design principles and our design system (links to the Figma library, Storybook and tokens). Write only what I tell you.
+4. Run `npx discovery-to-spec status` and tell me how to start a feature: /d2s-explore to think an idea through, or /d2s-frame to write the brief.</pre>
+    <button type="button" class="btn copy-btn" data-copy-from="setup-prompt" data-i18n="install.setupCopy">Copy the prompt</button>
+  </div>
   <p class="note" data-i18n="install.note">Requires Node.js 18 or later, for whoever runs the tool. Add <code dir="ltr">--lang he</code> for Hebrew templates.</p>
-  <p class="note" data-i18n="install.upgrade"><b>Upgrading to 0.7?</b> Update the package, then run <code dir="ltr">d2s init --force</code>. It puts the agent skills where your AI tools read them, removes the old <code dir="ltr">.cursor/commands/d2s-*</code> files, and keeps your template copies. New repositories no longer get template copies: d2s uses its built-in ones until you run <code dir="ltr">d2s templates</code>. Nothing changes for designers: the Figma plugin and the AI assistant work as before.</p>
+  <p class="note" data-i18n="install.upgrade"><b>Upgrading to 0.8?</b> Update the package, then run <code dir="ltr">d2s init --force</code> to add <code dir="ltr">/d2s-explore</code> and the updated skills. Coming from 0.6 or earlier, the same command also puts the skills where your AI tools read them. Nothing changes for designers: the Figma plugin and the AI assistant work as before.</p>
 </section>
 
 <section id="workflow" class="wrap block" aria-labelledby="workflow-title">

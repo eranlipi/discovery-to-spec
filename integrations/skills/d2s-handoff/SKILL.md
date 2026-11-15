@@ -5,7 +5,7 @@ description: Stage 6 (handoff) of a discovery-to-spec design exploration. Genera
 
 # d2s: handoff (stage 6 of 6)
 
-Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status` and ask which one.
+Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status --json` and ask which one.
 
 1. If `handoff.md` is missing, run `{{cli}} next <id>` from the spec stage. After spec edits, run `{{cli}} handoff <id>` to regenerate it.
 2. Read `handoff.md` and `spec.md` in full. If the Figma MCP server is available, read each linked frame before building that screen.

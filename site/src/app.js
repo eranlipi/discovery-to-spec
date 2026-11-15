@@ -76,8 +76,16 @@
   var instructionsEl = document.getElementById('assist-instructions');
   if (instructionsEl && ASSISTANT.instructions) instructionsEl.textContent = ASSISTANT.instructions;
 
-  /** The text a copy button copies: its data-copy value, or the assistant's instructions or sample notes. */
+  /**
+   * The text a copy button copies: its data-copy value, the text of the element data-copy-from
+   * names (in the language on screen), or the assistant's instructions or sample notes.
+   */
   function copyValue(btn) {
+    var from = btn.getAttribute('data-copy-from');
+    if (from) {
+      var source = document.getElementById(from);
+      return source ? source.textContent : '';
+    }
     var key = btn.getAttribute('data-copy-key');
     if (key === 'instructions') return ASSISTANT.instructions || '';
     if (key === 'description') return ASSISTANT.description || '';
@@ -101,7 +109,7 @@
   }
 
   document.addEventListener('click', function (e) {
-    var btn = e.target.closest ? e.target.closest('[data-copy], [data-copy-key]') : null;
+    var btn = e.target.closest ? e.target.closest('[data-copy], [data-copy-key], [data-copy-from]') : null;
     if (!btn) return;
     var value = copyValue(btn);
     copyText(value);

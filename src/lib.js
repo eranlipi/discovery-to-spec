@@ -535,9 +535,11 @@ function checkApprovals(content, settings) {
  */
 function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySections = false } = {}) {
   const issues = [];
-  const add = (level, section, code, message) => issues.push({ level, section, code, message });
   const file = path.join(exp.dir, stage.file);
   const rel = path.relative(ctx.root, file);
+  const posix = rel.split(path.sep).join('/');
+  const add = (level, section, code, message) =>
+    issues.push({ level, section, code, message, file: posix, fix: fixFor(ctx, exp, stage, code, section) });
   const result = () => ({
     errors: issues.filter((i) => i.level === 'error').map((i) => `${rel}: ${i.message}`),
     warnings: issues.filter((i) => i.level === 'warning').map((i) => `${rel}: ${i.message}`),
@@ -592,17 +594,50 @@ function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySection
 }
 
 /**
+ * What to do about a problem `checkStageDoc` found, in one line, for agents and for
+ * `--json` readers. An agent never writes an approval: it asks the people.
+ */
+function fixFor(ctx, exp, stage, code, section) {
+  const cli = (ctx.config && ctx.config.cli) || 'npx d2s';
+  switch (code) {
+    case 'file':
+      return `Restore ${stage.file}, or create it with "${cli} next ${exp.id}" from the stage before`;
+    case 'placeholder':
+      return 'Replace the {{…}} placeholders with real text';
+    case 'missing':
+      return `Add a "## ${section}" section, keeping the heading as the template has it`;
+    case 'empty':
+      return `Write the "${section}" section. If it isn't known yet, ask the people who know instead of inventing it`;
+    case 'figma':
+      return 'Link each direction to its Figma frames';
+    case 'approval':
+      return 'Each person who approved adds their own line: name, role, date. Never write an approval for someone';
+    case 'criteria':
+      return 'Write each criterion as Given / When / Then';
+    default:
+      return '';
+  }
+}
+
+/**
  * Check an exploration. Stages already passed must be complete (errors).
  * The current stage is work in progress: its gaps are warnings unless `strict`.
+ * Returns printable `errors` and `warnings`, and the same problems as `issues`
+ * (with their stage, file and a fix), for --json.
  */
 function checkExploration(ctx, exp, { strict = false } = {}) {
   const errors = [];
   const warnings = [];
-  if (exp.archived) return { errors, warnings };
+  const issues = [];
+  if (exp.archived) return { errors, warnings, issues };
   const current = stageIndex(exp.stage);
   if (current < 0) {
-    errors.push(`${exp.id}: unknown stage "${exp.stage}" in brief.md`);
-    return { errors, warnings };
+    const message = `unknown stage "${exp.stage}" in brief.md`;
+    errors.push(`${exp.id}: ${message}`);
+    const file = path.relative(ctx.root, exp.briefPath).split(path.sep).join('/');
+    const fix = `Set "stage" in brief.md to one of: ${STAGES.map((s) => s.id).join(', ')}`;
+    issues.push({ level: 'error', stage: null, section: null, code: 'stage', message, file, fix });
+    return { errors, warnings, issues };
   }
   STAGES.forEach((stage, i) => {
     if (i > current) return;
@@ -611,11 +646,16 @@ function checkExploration(ctx, exp, { strict = false } = {}) {
     // A stage that passed before 0.6.0 may lack the sections 0.6.0 added; its document shows it.
     const legacySections = i < current;
     const r = checkStageDoc(ctx, exp, stage, { legacyApprovals, legacySections });
-    if (i < current || strict) errors.push(...r.errors);
+    const binding = i < current || strict;
+    if (binding) errors.push(...r.errors);
     else warnings.push(...r.errors.map((e) => `${e} (in progress)`));
     warnings.push(...r.warnings);
+    for (const issue of r.issues) {
+      const inProgress = !binding && issue.level === 'error';
+      issues.push({ stage: stage.id, ...issue, level: inProgress ? 'warning' : issue.level, ...(inProgress ? { inProgress } : {}) });
+    }
   });
-  return { errors, warnings };
+  return { errors, warnings, issues };
 }
 
 module.exports = {

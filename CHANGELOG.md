@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.8.0 (2026-11-15)
+
+A few ideas borrowed from OpenSpec: a skill for thinking before Frame, JSON for agents, and an easier start.
+
+**Coming from 0.6:** 0.7.0 was released on GitHub but never reached npm, because the publish step failed. 0.8.0 includes everything in 0.7.0 (plug-and-play `init`, see 0.7.0 in CHANGELOG.md), so you upgrade once and run `d2s init --force` once.
+
+- **New: `/d2s-explore`.** A thinking partner for before Frame. It reads the product context, the decision log and past explorations, archived ones too, to bring up earlier work ("this was decided in 004-…"). It asks one question at a time and writes nothing without a yes. Not sure what the problem is? Explore. Know the problem? Frame.
+- **New: `--json` for `d2s status` and `d2s check`.** Exactly one JSON document on stdout, for agents and scripts:
+  - each exploration's next step;
+  - every problem with its file, section and a `fix`;
+  - errors as JSON too: `{ "ok": false, "error": … }`.
+- **The stage skills use the JSON.** They run `check <id> --strict --json` and work through each fix. A fix never tells an agent to write an approval.
+- **A clearer end to `init`.** It says what to fill first (`design/context.md`) and how to start in the AI tools it set up. It asks you to restart Cursor only when Cursor is in use.
+- **An AI setup prompt** in the README and on the website, in English and Hebrew. Paste it into Claude Code, Cursor or another coding assistant: it installs d2s, shows you what it created, and fills in the product context with you.
+- **Fixed:** on/off flags (`--json`, `--all`, `--strict`, `--force` and the like) no longer take the next word as their value, so `d2s status --json 001` and `d2s check --strict 001` work.
+- **Upgrading:** run `d2s init --force` to add `/d2s-explore` and the updated skills.
+
 ## 0.7.0 (2026-11-15)
 
 Plug and play: `d2s init` sets up only what your team uses.

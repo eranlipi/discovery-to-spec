@@ -63,10 +63,23 @@ test('every translatable element has its Hebrew text, including the upgrade note
   const he = context.window.D2S_I18N.he;
   const keys = [...new Set([...html.matchAll(/data-i18n(?:-aria)?="([^"]+)"/g)].map((m) => m[1]))];
   assert.deepEqual(keys.filter((k) => typeof he[k] !== 'string'), [], 'every data-i18n key needs a Hebrew entry in i18n.js');
-  assert.match(html, /data-i18n="install\.upgrade"><b>Upgrading to 0\.7\?<\/b>[^<]*<code dir="ltr">d2s init --force<\/code>/);
-  assert.match(he['install.upgrade'], /^<b>משדרגים ל-0\.7\?<\/b>.*<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(html, /data-i18n="install\.upgrade"><b>Upgrading to 0\.8\?<\/b>[^<]*<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(he['install.upgrade'], /^<b>משדרגים ל-0\.8\?<\/b>.*<code dir="ltr">d2s init --force<\/code>/);
   assert.match(html, /data-i18n="assistant\.upgrade"><b>Added it before 0\.6\?<\/b>/);
   assert.doesNotMatch(html + he['faq.a1'], /plugin is planned|תוסף ל-Figma מתוכנן/, 'the Figma plugin has shipped');
+
+  // The setup prompt for AI assistants: in both languages, with a button that copies the one on screen.
+  const prompt = html.match(/<pre id="setup-prompt"[^>]*data-i18n="install\.setupPrompt">([\s\S]*?)<\/pre>/);
+  assert.ok(prompt, 'the install section has the setup prompt');
+  assert.match(html, /<button[^>]*data-copy-from="setup-prompt"/);
+  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8').match(/### Or let your AI assistant do it[\s\S]*?```text\n([\s\S]*?)\n```/);
+  assert.equal(prompt[1], readme[1], 'the website and the README give the same prompt');
+  for (const text of [prompt[1], he['install.setupPrompt']]) {
+    assert.match(text, /npx discovery-to-spec init/);
+    assert.match(text, /--lang he/);
+    assert.match(text, /design\/context\.md/);
+    assert.match(text, /\/d2s-explore/);
+  }
 });
 
 test('the sandbox runs the real CLI in memory', () => {

@@ -47,6 +47,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - if: steps.tag.outputs.skip != 'true' || steps.tag.outputs.npm_skip != 'true'
         run: npm test
+      # npm goes first, so a failed publish never leaves a GitHub release that npm doesn't have.
+      # Re-running the job after a failure is safe: whatever is already out is skipped.
+      # Authenticates with npm trusted publishing: on npmjs.com, the package's Settings >
+      # Trusted publishing lists GitHub Actions, this repository and release.yml, with
+      # "npm publish" allowed. An NPM_TOKEN repository secret still works as a fallback.
+      - name: Publish to npm
+        if: steps.tag.outputs.npm_skip != 'true'
+        run: |
+          npm install -g npm@^11.5.1
+          npm publish --provenance --access public --loglevel verbose || {
+            echo "::error::npm publish failed. If the log says ENEEDAUTH or mentions OIDC: on npmjs.com, open discovery-to-spec > Settings > Trusted publishing and check there is a GitHub Actions entry for $GITHUB_REPOSITORY with the workflow file release.yml and \"npm publish\" allowed. Then re-run this job."
+            exit 1
+          }
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - if: steps.tag.outputs.skip != 'true'
         run: node .github/scripts/release-notes.mjs > notes.md
       - name: Package the Figma plugin and the AI assistant
@@ -65,12 +80,3 @@ jobs:
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           GH_TOKEN: ${{ github.token }}
-      # Authenticates with npm trusted publishing (set up on npmjs.com for this repo and
-      # release.yml), or with an NPM_TOKEN repository secret when there is one.
-      - name: Publish to npm
-        if: steps.tag.outputs.npm_skip != 'true'
-        run: |
-          npm install -g npm@^11.5.1
-          npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

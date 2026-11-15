@@ -5,7 +5,7 @@ description: Stage 2 (research) of a discovery-to-spec design exploration. Synth
 
 # d2s: research (stage 2 of 6)
 
-Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status` and ask which one.
+Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status --json` and ask which one.
 
 1. Read `.d2s.json` and write in its `lang`. Read `{{dir}}/context.md` and the exploration's `brief.md` first, because the research serves that problem.
 2. Open `{{dir}}/explorations/<id>/insights.md`. If it doesn't exist, the brief hasn't passed its gate yet; run `{{cli}} status <id>` and tell the user.
@@ -14,4 +14,4 @@ Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status` an
 5. Never invent, embellish or merge quotes, numbers or sources. If the evidence is thin, say so and lower the confidence.
 6. Anonymize personal data (names, emails, phone numbers, account ids) in the document.
 7. List the opportunities that follow from the insights, and put untested assumptions under "still unclear".
-8. Run `{{cli}} check <id>`. Next step: `{{cli}} next <id>`, then `/d2s-options`.
+8. Run `{{cli}} check <id> --strict --json` and work through each issue's `fix` until `ok` is true. Next step: `{{cli}} next <id>`, then `/d2s-options`.
