@@ -104,7 +104,7 @@
     <div class="cmd" dir="ltr"><span class="prompt">$</span><code>node path/to/discovery-to-spec/bin/d2s.js init</code><button type="button" class="copy" data-copy="node path/to/discovery-to-spec/bin/d2s.js init" data-i18n="copy">copy</button></div>
   </div>
   <p class="note" data-i18n="install.note">Requires Node.js 18 or later, for whoever runs the tool. Add <code dir="ltr">--lang he</code> for Hebrew templates.</p>
-  <p class="note" data-i18n="install.upgrade"><b>Upgrading to 0.6?</b> Update the package, then run <code dir="ltr">d2s init --force</code>. It refreshes the templates you haven’t changed and keeps the ones you have, with a list of the new sections to add to them. Explorations that passed Frame or Spec before the upgrade show the new sections as warnings, not errors, so CI keeps passing. Designers get the new Figma plugin from the <a href="https://github.com/eranlipi/discovery-to-spec/releases/tag/v0.6.0">release</a>, and the new <a href="#assistant">AI assistant</a> below.</p>
+  <p class="note" data-i18n="install.upgrade"><b>Upgrading to 0.7?</b> Update the package, then run <code dir="ltr">d2s init --force</code>. It puts the agent skills where your AI tools read them, removes the old <code dir="ltr">.cursor/commands/d2s-*</code> files, and keeps your template copies. New repositories no longer get template copies: d2s uses its built-in ones until you run <code dir="ltr">d2s templates</code>. Nothing changes for designers: the Figma plugin and the AI assistant work as before.</p>
 </section>
 
 <section id="workflow" class="wrap block" aria-labelledby="workflow-title">
