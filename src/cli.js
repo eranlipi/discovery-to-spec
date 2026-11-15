@@ -24,6 +24,33 @@ function defaultCli(root) {
   return real(lib.PKG_ROOT).startsWith(modules) ? 'npx d2s' : REMOTE_CLI;
 }
 
+/**
+ * Which AI tools the team uses, from the repository first and then this computer.
+ * `claude` and `cursor` hold the file that gave each away ("" when not found).
+ */
+function detectAgents(root) {
+  const home = process.env.HOME || process.env.USERPROFILE || '';
+  const inRepo = (names) => names.find((n) => lib.exists(path.join(root, n))) || '';
+  const onComputer = (name) => (home && lib.exists(path.join(home, name)) ? `~/${name}` : '');
+  const claude = inRepo(['.claude', 'CLAUDE.md', 'CLAUDE.local.md']) || onComputer('.claude');
+  const cursor = inRepo(['.cursor', '.cursorrules', '.cursorignore']) || onComputer('.cursor');
+  const agents = [];
+  if (claude) agents.push('claude');
+  if (cursor) agents.push('cursor');
+  if (lib.exists(path.join(root, 'AGENTS.md'))) agents.push('agents-md');
+  return { agents, claude, cursor };
+}
+
+/**
+ * Where the skills go: one copy only, because Cursor also reads .claude/skills and would list
+ * them twice. `fallback` puts them in .claude/skills when no tool was found.
+ */
+function skillsHome(agents, fallback) {
+  if (agents.includes('claude')) return '.claude/skills';
+  if (agents.includes('cursor')) return '.cursor/skills';
+  return fallback ? '.claude/skills' : '';
+}
+
 /** The CI steps that install a project's dependencies: pnpm or yarn when their lockfile is there, else npm. */
 function ciInstallSteps(root) {
   const has = (f) => fs.existsSync(path.join(root, f));
@@ -85,7 +112,7 @@ function init(flags) {
   const root = process.cwd();
   const cfgPath = path.join(root, lib.CONFIG_FILE);
   if (lib.exists(cfgPath) && !flags.force) {
-    throw new UserError(`Already initialized (${lib.CONFIG_FILE} exists). Use --force to refresh the agent files and the templates you haven't changed.`);
+    throw new UserError(`Already initialized (${lib.CONFIG_FILE} exists). Use --force to refresh the agent skills, and any template copies you haven't changed.`);
   }
   // --force keeps the existing settings unless a flag changes them.
   let existing = {};
@@ -100,12 +127,14 @@ function init(flags) {
   if (!lib.LANGS.includes(lang)) throw new UserError(`--lang must be one of: ${lib.LANGS.join(', ')}`);
   const dir = typeof flags.dir === 'string' ? flags.dir.replace(/\/+$/, '') : existing.dir || 'design';
   const cli = typeof flags.cli === 'string' ? flags.cli : existing.cli || defaultCli(root);
-  let agents = AGENTS;
-  if (typeof flags.agents === 'string') {
-    agents = flags.agents === 'none' ? [] : flags.agents.split(',').map((s) => s.trim()).filter(Boolean);
-    const unknown = agents.filter((a) => !AGENTS.includes(a));
-    if (unknown.length) throw new UserError(`Unknown agent "${unknown[0]}". Use: ${AGENTS.join(', ')}, or none.`);
-  }
+  // The AI tools to set up: the ones --agents names, or else the ones the team already uses.
+  const chosen = typeof flags.agents === 'string';
+  const detected = chosen ? null : detectAgents(root);
+  const agents = !chosen ? detected.agents
+    : flags.agents === 'none' ? [] : flags.agents.split(',').map((s) => s.trim()).filter(Boolean);
+  const unknown = agents.filter((a) => !AGENTS.includes(a));
+  if (unknown.length) throw new UserError(`Unknown agent "${unknown[0]}". Use: ${AGENTS.join(', ')}, or none.`);
+  const skillsDir = skillsHome(agents, !chosen);
 
   // A project-local install needs its dependencies in CI before "npx d2s" can run,
   // installed with the package manager whose lockfile the project has.
@@ -129,22 +158,26 @@ function init(flags) {
     }
     results.push(['kept', rel, STAGE_TEMPLATES.includes(name) ? templateNews(mine, text) : '']);
   };
+  // Only what people read. The decision log and the explorations folder appear when first needed,
+  // and the templates come from the package unless the team copies them in with "d2s templates".
   designFile(`${dir}/README.md`, 'readme', lib.render(lib.packagedTemplate(lang, 'readme'), vars), existing.cli);
   designFile(`${dir}/context.md`, 'context', lib.render(lib.packagedTemplate(lang, 'context'), vars));
-  put(`${dir}/decisions.md`, lib.render(lib.packagedTemplate(lang, 'decisions'), vars));
-  put(`${dir}/explorations/.gitkeep`, '');
-  for (const name of TEMPLATE_NAMES) designFile(`${dir}/templates/${name}.md`, name, lib.packagedTemplate(lang, name));
+  for (const name of TEMPLATE_NAMES) {
+    const rel = `${dir}/templates/${name}.md`;
+    if (lib.exists(path.join(root, rel))) designFile(rel, name, lib.packagedTemplate(lang, name));
+  }
 
-  // Agent integrations (ours to manage: refreshed with --force)
-  const skillsDir = path.join(lib.PKG_ROOT, 'integrations', 'skills');
-  const skills = fs.readdirSync(skillsDir).filter((n) => n.startsWith('d2s-')).sort();
+  // Agent skills (ours to manage: refreshed with --force)
+  const packaged = path.join(lib.PKG_ROOT, 'integrations', 'skills');
+  const skills = fs.readdirSync(packaged).filter((n) => n.startsWith('d2s-')).sort();
   for (const name of skills) {
-    const text = lib.render(lib.readText(path.join(skillsDir, name, 'SKILL.md')), vars);
-    if (agents.includes('claude')) put(`.claude/skills/${name}/SKILL.md`, text, !!flags.force);
-    if (agents.includes('cursor')) {
-      const body = lib.parseFrontMatter(text).body.trimStart();
-      put(`.cursor/commands/${name}.md`, body, !!flags.force);
-    }
+    const text = lib.render(lib.readText(path.join(packaged, name, 'SKILL.md')), vars);
+    if (skillsDir) put(`${skillsDir}/${name}/SKILL.md`, text, !!flags.force);
+  }
+  // Copies an earlier d2s wrote elsewhere would show up twice in Cursor, next to the new skills.
+  for (const name of skillsDir ? skills : []) {
+    removeOurs(root, `.cursor/commands/${name}.md`, results);
+    if (skillsDir === '.claude/skills') removeOurs(root, `.cursor/skills/${name}`, results);
   }
   if (agents.includes('agents-md')) results.push([upsertAgentsMd(root, lib.render(pkg('integrations/agents-md.md'), vars)), 'AGENTS.md']);
   if (flags.ci) put('.github/workflows/d2s-check.yml', lib.render(pkg('integrations/ci/d2s-check.yml'), vars), !!flags.force);
@@ -156,8 +189,9 @@ function init(flags) {
   results.push([flags.force ? 'updated' : 'created', lib.CONFIG_FILE]);
 
   log(c.bold(`discovery-to-spec initialized (${lang === 'he' ? 'Hebrew' : 'English'} templates)\n`));
+  log(`${agentsLine(detected, agents, skillsDir)}\n`);
   for (const [state, rel, note] of results) {
-    const label = state === 'kept' ? c.dim('kept   ') : state === 'updated' ? c.yellow('updated') : c.green('created');
+    const label = { kept: c.dim('kept   '), updated: c.yellow('updated'), removed: c.yellow('removed') }[state] || c.green('created');
     log(`  ${label} ${rel}${note ? c.yellow(`  (${note})`) : ''}`);
   }
   if (results.some((r) => r[2])) {
@@ -177,6 +211,42 @@ function templateNews(mine, packaged) {
   const quote = (list) => list.map((t) => `"${t.heading}"`).join(', ');
   const news = [added.length && `adds ${quote(added)}`, nowRequired.length && `requires ${quote(nowRequired)}`].filter(Boolean);
   return news.length ? `your own version; the new template ${news.join(' and ')}` : '';
+}
+
+/** Delete a file or folder that d2s itself wrote (a d2s-* skill or command), if it is there. */
+function removeOurs(root, rel, results) {
+  const p = path.join(root, rel);
+  if (!lib.exists(p)) return;
+  fs.rmSync(p, { recursive: true, force: true });
+  results.push(['removed', rel]);
+}
+
+/** One line on which AI tools init set up, and why. */
+function agentsLine(detected, agents, skillsDir) {
+  const where = skillsDir ? `skills in ${skillsDir}` : 'no agent skills';
+  const both = skillsDir === '.claude/skills' && agents.includes('cursor') ? ' (Cursor reads it too)' : '';
+  if (!detected) return `AI tools: ${agents.length ? agents.join(', ') : 'none'} (--agents) → ${where}${both}`;
+  const found = [detected.claude && `Claude Code (${detected.claude})`, detected.cursor && `Cursor (${detected.cursor})`].filter(Boolean);
+  if (!found.length) return `No AI tool found → ${where} (Claude Code and Cursor both read it). Choose with --agents.`;
+  return `Found ${found.join(' and ')} → ${where}${both}`;
+}
+
+// ---------- templates ----------
+
+/** Copy the packaged templates into the design folder, for a team that wants to adapt them. */
+function templates(positional) {
+  const ctx = lib.loadContext();
+  const names = positional.length ? positional : TEMPLATE_NAMES;
+  const unknown = names.filter((n) => !TEMPLATE_NAMES.includes(n));
+  if (unknown.length) throw new UserError(`Unknown template "${unknown[0]}". Use: ${TEMPLATE_NAMES.join(', ')}.`);
+  for (const name of names) {
+    const file = path.join(ctx.designDir, 'templates', `${name}.md`);
+    const state = lib.writeFileSafe(file, lib.packagedTemplate(ctx.lang, name));
+    log(`  ${state === 'kept' ? c.dim('kept   ') : c.green('created')} ${path.relative(ctx.root, file)}`);
+  }
+  log(`\nd2s now uses these copies instead of its built-in templates. Every "##" heading is required unless it ends with (optional).`);
+  log(`"${ctx.config.cli} init --force" refreshes the copies you haven't changed when you upgrade d2s.`);
+  return 0;
 }
 
 function upsertAgentsMd(root, block) {
@@ -580,16 +650,19 @@ const HELP = `discovery-to-spec ${VERSION} — a repo-native workflow for design
 
 Usage: d2s <command> [options]
 
-  init                  Set up the design folder, templates and agent skills
+  init                  Set up the config, the design folder and the agent skills
       --lang he|en        Template language (default: en)
       --dir <path>        Design folder (default: design)
-      --agents <list>     claude,cursor,agents-md or none (default: all three)
+      --agents <list>     claude,cursor,agents-md or none (default: the AI tools found
+                          in the repository and on this computer; .claude/skills if none)
       --cli "<command>"   How docs and skills call this tool (default: "npx d2s" when
                           installed in the project, otherwise ${REMOTE_CLI})
       --ci                Add a GitHub Actions check for pull requests
-      --force             Refresh an initialized repo: agent files, config, and the
-                          templates you haven't changed. Keeps the language, folder,
+      --force             Refresh an initialized repo: agent skills, config, and the
+                          template copies you haven't changed. Keeps the language, folder,
                           command, approval rules and your own templates
+  templates [name...]   Copy the built-in templates into <dir>/templates to adapt them
+                        (all of them, or e.g. "brief spec"). Existing copies are kept
   new "<title>"         Start an exploration (stage 1: frame)
       --slug <name>       Folder name (latin letters)
       --owner <name>      Who leads it
@@ -629,6 +702,8 @@ function main(argv) {
     switch (command) {
       case 'init':
         return init(flags);
+      case 'templates':
+        return templates(positional);
       case 'new':
         return cmdNew(positional, flags);
       case 'status':

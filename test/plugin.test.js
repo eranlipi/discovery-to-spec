@@ -209,10 +209,8 @@ function panelScripts() {
 function seededGitHub(lang = 'en') {
   const files = {
     '.d2s.json': JSON.stringify({ version: 1, lang, dir: 'design', cli: 'npx d2s', approvals: lib.DEFAULT_APPROVALS }),
-    'design/decisions.md': lib.packagedTemplate(lang, 'decisions'),
     'design/explorations/001-checkout/brief.md': lib.render(lib.packagedTemplate(lang, 'brief'), { id: '001-checkout', title: 'Checkout', date: '2026-11-09', owner: 'Dana' }),
   };
-  for (const name of ['brief', 'insights', 'options', 'decision', 'spec', 'handoff', 'summary']) files[`design/templates/${name}.md`] = lib.packagedTemplate(lang, name);
   return createFakeGitHub({ files });
 }
 

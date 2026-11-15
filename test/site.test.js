@@ -75,8 +75,9 @@ test('the sandbox runs the real CLI in memory', () => {
   assert.equal(d2s.version, require('../package.json').version);
 
   assert.equal(d2s.run(['init', '--cli', 'd2s']).code, 0);
-  assert.ok(d2s.exists('design/templates/brief.md'));
-  assert.ok(d2s.exists('.claude/skills/d2s-frame/SKILL.md'));
+  assert.ok(!d2s.exists('design/templates/brief.md'), 'the templates come from the package');
+  assert.ok(d2s.exists('design/context.md'));
+  assert.ok(d2s.exists('.claude/skills/d2s-frame/SKILL.md'), 'no AI tool to find in the browser: .claude/skills');
 
   assert.equal(d2s.run(['new', 'Checkout drop-off']).code, 0);
   const blocked = d2s.run(['next', '1']);
@@ -91,6 +92,8 @@ test('the sandbox runs the real CLI in memory', () => {
   d2s.reset();
   assert.equal(d2s.files().length, 0, 'reset empties the workspace');
   assert.equal(d2s.run(['init', '--lang', 'he']).code, 0);
+  assert.match(d2s.read('design/README.md'), /תהליך|עיצוב/);
+  assert.equal(d2s.run(['templates', 'brief']).code, 0);
   assert.match(d2s.read('design/templates/brief.md'), /## הבעיה/);
 });
 

@@ -69,7 +69,7 @@ To pin a version, add it to the name: `npm i -D discovery-to-spec@0.6.1`. Instal
 ## Quick start
 
 ```bash
-npx d2s init                                    # once per repository
+npx d2s init                                    # once per repository: config, README, context and skills
 npx d2s new "Checkout drop-off on mobile"       # starts 001-checkout-drop-off-on-mobile
 # fill design/explorations/001-checkout-drop-off-on-mobile/brief.md
 npx d2s next 1                                  # passes the gate and opens insights.md
@@ -93,7 +93,8 @@ The structure borrows from Shape Up (appetite, no-gos), continuous discovery (ev
 
 | Command | What it does |
 | --- | --- |
-| `d2s init` | Creates the design folder, templates, agent skills and config. Options: `--lang en\|he`, `--dir`, `--agents claude,cursor,agents-md\|none`, `--cli`, `--ci`, `--force` (refreshes an initialized repo, see [refreshing templates](#refreshing-templates)) |
+| `d2s init` | Creates the config, `design/README.md`, `design/context.md` and the agent skills for the AI tools it finds (see [AI agents](#ai-agents)). Options: `--lang en\|he`, `--dir`, `--agents claude,cursor,agents-md\|none`, `--cli`, `--ci`, `--force` (refreshes an initialized repo, see [refreshing templates](#refreshing-templates)) |
+| `d2s templates [name...]` | Copies the built-in templates into `design/templates/` so you can adapt them: all of them, or the ones you name (`brief spec`). Copies you already have are kept |
 | `d2s new "<title>"` | Starts an exploration. Options: `--slug`, `--owner` |
 | `d2s status [id]` | Lists explorations, or shows one stage by stage. `--all` includes archived ones |
 | `d2s check [id]` | Validates documents and exits with 1 on errors. Stages already passed must be complete; the current one may be in progress (`--strict` requires it too). `--verify-approvals` checks approvals against GitHub reviews (see below) |
@@ -186,7 +187,7 @@ In the Figma plugin, the whole paste is saved as one commit, such as "001-checko
 
 ## AI agents
 
-`init` installs one skill per stage:
+`init` installs one skill per stage, only for the AI tools your team uses:
 
 | Command | Helps with |
 | --- | --- |
@@ -197,7 +198,14 @@ In the Figma plugin, the whole paste is saved as one commit, such as "001-checko
 | `/d2s-spec` | Going through every state and edge case, writing testable criteria and naming the components it reuses |
 | `/d2s-handoff` | Implementing from the spec, asking instead of guessing |
 
-Claude Code reads them from `.claude/skills/`, Cursor from `.cursor/commands/`. Agents that read `AGENTS.md` (Codex, Copilot and others) get the shared rules. The skills and agents read `design/context.md` for every feature. If the Figma MCP server is connected, the skills read the linked frames, the current screens and the design-system library, and prefer existing components.
+- **Claude Code** (a `.claude/` folder or `CLAUDE.md` in the repo, or `~/.claude` on your computer): the skills go in `.claude/skills/`.
+- **Cursor only** (`.cursor/`, `.cursorrules` or `~/.cursor`): they go in `.cursor/skills/`.
+- **Both, or neither found:** `.claude/skills/`. Cursor reads that folder too, so one copy works in both tools and nothing shows up twice.
+- **`AGENTS.md`** (Codex, Copilot and others): if the repo has one, `init` adds the shared rules to it. It doesn't create one unless you pass `--agents agents-md`.
+
+`--agents` overrides what `init` finds. After upgrading, `init --force` puts the skills in the right place and removes the `.cursor/commands/d2s-*` copies that earlier versions wrote.
+
+The skills and agents read `design/context.md` for every feature. If the Figma MCP server is connected, the skills read the linked frames, the current screens and the design-system library, and prefer existing components.
 
 Only use AI tools your organization has approved, and don't paste internal information into free public AI tools.
 
@@ -215,14 +223,14 @@ Templates ship in English (default) and Hebrew (`--lang he`, right to left). The
 
 ## Customizing
 
-- **Templates:** edit `design/templates/*.md` in your repo. Every `##` heading is required unless it ends with `(optional)`.
+- **Templates:** d2s uses its built-in templates until you run `d2s templates` (or `d2s templates brief spec`), which copies them into `design/templates/`. Edit the copies there: d2s uses them instead, and every `##` heading is required unless it ends with `(optional)`.
 - **Product context:** fill in `design/context.md` once: the product, its users, design principles and design system, with links to the Figma library, Storybook and tokens. The assistant and agents read it for every feature.
 - **Config:** `.d2s.json` holds `lang`, `dir`, `cli` (the command the generated docs and skills use) and `approvals` (see [the decision gate](#the-decision-gate)).
 - The handoff reads a few headings by name: the problem, open questions, chosen direction, approved by and acceptance criteria. Keep those if you rename others.
 
 ### Refreshing templates
 
-Your repo keeps its own copies of the templates, so a new d2s version doesn't change them until you run `d2s init --force`. It refreshes every file in `design/templates/`, plus `design/README.md` and `design/context.md`, that you haven't changed, and keeps the ones you have. For a template you've made your own, it lists the sections the new version adds, to copy in by hand. Your settings and the decision log are kept.
+Without copies of your own, the templates come with d2s and update when you upgrade it. Copies in `design/templates/` (made with `d2s templates`, or by `init` before 0.7) don't change until you run `d2s init --force`. It refreshes every copy, plus `design/README.md` and `design/context.md`, that you haven't changed, and keeps the ones you have. For a template you've made your own, it lists the sections the new version adds, to copy in by hand. Your settings and the decision log are kept.
 
 **Upgrading to 0.6.** The new templates add "Where it lives today" to the brief and make "Existing components" required in the spec. Explorations that passed Frame or Spec before the upgrade don't have them, so `d2s check` shows those as warnings, not errors, and CI keeps passing. The stage an exploration is at, and every new exploration, need them to pass the gate.
 

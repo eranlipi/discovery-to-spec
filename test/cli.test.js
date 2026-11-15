@@ -15,12 +15,20 @@ function tmpRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'd2s-'));
 }
 
+// An empty home folder, so the AI tools installed on this computer don't change what init detects.
+const EMPTY_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'd2s-home-'));
+
 function run(cwd, ...args) {
   return runBin(BIN, cwd, ...args);
 }
 
 function runBin(bin, cwd, ...args) {
-  const r = spawnSync(process.execPath, [bin, ...args], { cwd, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' } });
+  return runHome(EMPTY_HOME, bin, cwd, ...args);
+}
+
+function runHome(home, bin, cwd, ...args) {
+  const env = { ...process.env, NO_COLOR: '1', HOME: home, USERPROFILE: home };
+  const r = spawnSync(process.execPath, [bin, ...args], { cwd, encoding: 'utf8', env });
   return { code: r.status, out: r.stdout + r.stderr };
 }
 
@@ -62,29 +70,25 @@ function template05(lang, name) {
         .replace('who it matters to, where it lives in the product today, desired outcome', 'who it matters to, desired outcome')
         .replace('pros and cons, and what each changes in the product |', 'pros and cons |')
         .replace('edge cases, acceptance criteria and the components used |', 'edge cases and acceptance criteria |')
-        .replace('design principles and design system. The AI assistant and agents read it for every feature.', 'design principles.'),
+        .replace('design principles and design system. The AI assistant and agents read it for every feature.', 'design principles.')
+        .replace(/^- `templates\/` \(optional\).*$/m, '- `templates/` — the templates. Adapt them to your team.'),
   }[name]();
   assert.notEqual(old, now);
   assert.ok(lib.isShipped(lang, name, old), `the rebuilt ${lang}/${name} is the one 0.5.0 shipped`);
   return old;
 }
 
-test('init creates the design folder, skills, AGENTS.md and config', () => {
+test('init creates the config, the README, the context and the skills, and nothing else', () => {
   const repo = tmpRepo();
   const r = run(repo, 'init');
   assert.equal(r.code, 0, r.out);
-  for (const f of [
-    '.d2s.json',
-    'design/README.md',
-    'design/context.md',
-    'design/decisions.md',
-    'design/templates/brief.md',
-    '.claude/skills/d2s-frame/SKILL.md',
-    '.cursor/commands/d2s-spec.md',
-    'AGENTS.md',
-  ]) {
+  for (const f of ['.d2s.json', 'design/README.md', 'design/context.md', '.claude/skills/d2s-frame/SKILL.md']) {
     assert.ok(fs.existsSync(path.join(repo, f)), `${f} should exist`);
   }
+  for (const f of ['design/templates', 'design/decisions.md', 'design/explorations', '.cursor', 'AGENTS.md']) {
+    assert.ok(!fs.existsSync(path.join(repo, f)), `${f} should not exist`);
+  }
+  assert.match(r.out, /No AI tool found → skills in \.claude\/skills \(Claude Code and Cursor both read it\)/);
   const config = JSON.parse(read(repo, '.d2s.json'));
   assert.deepEqual(config, {
     version: 1,
@@ -96,8 +100,110 @@ test('init creates the design folder, skills, AGENTS.md and config', () => {
   const skill = read(repo, '.claude/skills/d2s-frame/SKILL.md');
   assert.match(skill, /^---\nname: d2s-frame/);
   assert.doesNotMatch(skill, /\{\{\w+\}\}/, 'placeholders are rendered');
-  assert.doesNotMatch(read(repo, '.cursor/commands/d2s-frame.md'), /^---/, 'cursor commands have no front matter');
   assert.ok(!fs.existsSync(path.join(repo, '.github')), 'no CI unless --ci');
+
+  // Without template copies, the gate and the documents use the built-in templates.
+  assert.equal(run(repo, 'new', 'Checkout').code, 0);
+  assert.match(read(exp(repo, '001-checkout', 'brief.md')), /^## Problem$/m);
+  assert.match(run(repo, 'next', '1').out, /section "Problem" is empty/);
+});
+
+test('init installs the skills only for the AI tools the team uses', () => {
+  const skills = (repo) => ['.claude/skills', '.cursor/skills', '.cursor/commands'].filter((d) => fs.existsSync(path.join(repo, d)));
+
+  // Cursor only: real skills in .cursor/skills, with their front matter.
+  const cursor = tmpRepo();
+  fs.mkdirSync(path.join(cursor, '.cursor'));
+  let r = run(cursor, 'init');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /Found Cursor \(\.cursor\) → skills in \.cursor\/skills/);
+  assert.deepEqual(skills(cursor), ['.cursor/skills']);
+  assert.match(read(cursor, '.cursor/skills/d2s-spec/SKILL.md'), /^---\nname: d2s-spec/);
+
+  // Claude Code: .claude/skills.
+  const claude = tmpRepo();
+  fs.writeFileSync(path.join(claude, 'CLAUDE.md'), '# Notes\n');
+  assert.match(run(claude, 'init').out, /Found Claude Code \(CLAUDE\.md\) → skills in \.claude\/skills\n/);
+  assert.deepEqual(skills(claude), ['.claude/skills']);
+
+  // Both: one copy in .claude/skills, which Cursor reads too, so nothing shows up twice.
+  const both = tmpRepo();
+  fs.mkdirSync(path.join(both, '.claude'));
+  fs.writeFileSync(path.join(both, '.cursorrules'), '');
+  assert.match(run(both, 'init').out, /Found Claude Code \(\.claude\) and Cursor \(\.cursorrules\) → skills in \.claude\/skills \(Cursor reads it too\)/);
+  assert.deepEqual(skills(both), ['.claude/skills']);
+
+  // Nothing in the repository, Cursor on this computer.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'd2s-home-'));
+  fs.mkdirSync(path.join(home, '.cursor'));
+  const fresh = tmpRepo();
+  assert.match(runHome(home, BIN, fresh, 'init').out, /Found Cursor \(~\/\.cursor\) → skills in \.cursor\/skills/);
+  assert.deepEqual(skills(fresh), ['.cursor/skills']);
+
+  // AGENTS.md is updated when the repository has one, and never created unasked.
+  const agentsMd = tmpRepo();
+  fs.writeFileSync(path.join(agentsMd, 'AGENTS.md'), '# AGENTS.md\n\nOur rules.\n');
+  run(agentsMd, 'init');
+  assert.match(read(agentsMd, 'AGENTS.md'), /Our rules\.\n\n<!-- d2s:start -->/);
+  assert.ok(!fs.existsSync(path.join(cursor, 'AGENTS.md')));
+  const asked = tmpRepo();
+  run(asked, 'init', '--agents', 'agents-md');
+  assert.match(read(asked, 'AGENTS.md'), /<!-- d2s:start -->/);
+
+  // --agents decides on its own.
+  const chosen = tmpRepo();
+  fs.mkdirSync(path.join(chosen, '.claude'));
+  r = run(chosen, 'init', '--agents', 'cursor');
+  assert.match(r.out, /AI tools: cursor \(--agents\) → skills in \.cursor\/skills/);
+  assert.deepEqual(skills(chosen), ['.cursor/skills']);
+  const none = tmpRepo();
+  assert.match(run(none, 'init', '--agents', 'none').out, /no agent skills/);
+  assert.deepEqual(skills(none), []);
+  assert.ok(!fs.existsSync(path.join(none, 'AGENTS.md')));
+});
+
+test('init --force replaces the Cursor commands an earlier d2s wrote, and keeps the team\'s own', () => {
+  const repo = tmpRepo();
+  run(repo, 'init', '--agents', 'claude');
+  // As 0.6 left it: the skills as Cursor commands next to .claude/skills, and a command of the team's.
+  const commands = path.join(repo, '.cursor', 'commands');
+  fs.mkdirSync(commands, { recursive: true });
+  fs.writeFileSync(path.join(commands, 'd2s-frame.md'), '# d2s: frame\n');
+  fs.writeFileSync(path.join(commands, 'release.md'), '# Release\n');
+  fs.mkdirSync(path.join(repo, '.cursor', 'skills', 'd2s-spec'), { recursive: true });
+  fs.writeFileSync(path.join(repo, '.cursor', 'skills', 'd2s-spec', 'SKILL.md'), '---\nname: d2s-spec\n---\n');
+
+  const r = run(repo, 'init', '--force');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /removed \.cursor\/commands\/d2s-frame\.md/);
+  assert.match(r.out, /removed \.cursor\/skills\/d2s-spec/);
+  assert.ok(!fs.existsSync(path.join(commands, 'd2s-frame.md')));
+  assert.ok(!fs.existsSync(path.join(repo, '.cursor', 'skills', 'd2s-spec')));
+  assert.equal(read(commands, 'release.md'), '# Release\n', "the team's own command is theirs");
+  assert.ok(fs.existsSync(path.join(repo, '.claude', 'skills', 'd2s-frame', 'SKILL.md')));
+});
+
+test('d2s templates copies the built-in templates in, for a team that wants to adapt them', () => {
+  const repo = tmpRepo();
+  assert.equal(run(repo, 'templates').code, 1, 'needs an initialized repository');
+  run(repo, 'init', '--lang', 'he');
+
+  let r = run(repo, 'templates', 'brief');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /created design\/templates\/brief\.md/);
+  assert.deepEqual(fs.readdirSync(path.join(repo, 'design', 'templates')), ['brief.md']);
+  assert.equal(read(repo, 'design', 'templates', 'brief.md'), lib.packagedTemplate('he', 'brief'));
+
+  fs.appendFileSync(path.join(repo, 'design', 'templates', 'brief.md'), '\n## מדדים\n');
+  r = run(repo, 'templates');
+  assert.match(r.out, /kept {4}design\/templates\/brief\.md/);
+  assert.match(r.out, /created design\/templates\/summary\.md/);
+  assert.equal(fs.readdirSync(path.join(repo, 'design', 'templates')).length, 7);
+  assert.match(read(repo, 'design', 'templates', 'brief.md'), /## מדדים\n$/, 'an edited copy is kept');
+
+  r = run(repo, 'templates', 'brief', 'nope');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /Unknown template "nope"\. Use: brief, insights/);
 });
 
 test('init defaults to "npx d2s" when the package is installed in the project', () => {
@@ -340,6 +446,7 @@ test('a new brief needs "Where it lives today" to pass the gate; a brand-new are
 test('after init --force, stages that passed before 0.6.0 only warn about the new sections', () => {
   const repo = tmpRepo();
   run(repo, 'init');
+  run(repo, 'templates');
   // A repository set up with 0.5.0: its copies of the brief and spec templates predate the new sections.
   const tpl = (name) => path.join(repo, 'design', 'templates', `${name}.md`);
   fs.writeFileSync(tpl('brief'), template05('en', 'brief'));
@@ -391,6 +498,7 @@ test('after init --force, stages that passed before 0.6.0 only warn about the ne
 test("init --force refreshes the design files a team never changed and keeps the ones they made their own", () => {
   const repo = tmpRepo();
   run(repo, 'init', '--cli', 'npx d2s');
+  run(repo, 'templates');
   const tpl = (name) => path.join(repo, 'design', 'templates', `${name}.md`);
   // As 0.5.0 left them: the README rendered with the command, the spec template untouched,
   // and a brief template the team extended with a section of its own.
@@ -422,6 +530,7 @@ test("init --force refreshes the design files a team never changed and keeps the
 
   const he = tmpRepo();
   run(he, 'init', '--lang', 'he');
+  fs.mkdirSync(path.join(he, 'design', 'templates'));
   fs.writeFileSync(path.join(he, 'design', 'templates', 'brief.md'), template05('he', 'brief'));
   assert.match(run(he, 'init', '--force').out, /updated design\/templates\/brief\.md/);
   assert.match(read(he, 'design', 'templates', 'brief.md'), /^## איפה זה חי היום$/m);
@@ -441,12 +550,12 @@ test('every version of the design files that d2s ships is fingerprinted, so init
 test('Hebrew locale: right-to-left templates go through the same gate', () => {
   const repo = tmpRepo();
   assert.equal(run(repo, 'init', '--lang', 'he').code, 0);
-  assert.match(read(repo, 'design', 'templates', 'brief.md'), /^## הבעיה$/m);
 
   const r = run(repo, 'new', 'נטישה בתשלום');
   assert.equal(r.code, 0);
   assert.match(r.out, /--slug/, 'a title without latin letters suggests --slug');
   const id = '001-exploration';
+  assert.match(read(exp(repo, id, 'brief.md')), /^## הבעיה$/m, 'the built-in Hebrew template');
   assert.equal(run(repo, 'next', id).code, 1);
 
   for (const file of ['brief.md', 'insights.md', 'options.md']) {
@@ -500,6 +609,7 @@ test('archive refuses unfinished work unless forced', () => {
 test("a team's own templates override the packaged ones", () => {
   const repo = tmpRepo();
   run(repo, 'init');
+  run(repo, 'templates', 'brief');
   fs.writeFileSync(
     path.join(repo, 'design', 'templates', 'brief.md'),
     '---\ntitle: {{title}}\nstage: frame\n---\n\n# {{title}}\n\n## Job story\n',
