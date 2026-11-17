@@ -13,7 +13,7 @@
     "cursor",
     "design-ops"
   ],
-  "homepage": "https://github.com/eranlipi/discovery-to-spec#readme",
+  "homepage": "https://discoverytospec.com",
   "bugs": {
     "url": "https://github.com/eranlipi/discovery-to-spec/issues"
   },
@@ -31,7 +31,9 @@
     "bin",
     "src",
     "templates",
-    "integrations",
+    "integrations/skills",
+    "integrations/agents-md.md",
+    "integrations/ci",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

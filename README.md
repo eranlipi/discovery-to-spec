@@ -1,5 +1,9 @@
 # discovery-to-spec
 
+[![npm version](https://img.shields.io/npm/v/discovery-to-spec)](https://www.npmjs.com/package/discovery-to-spec)
+[![npm downloads](https://img.shields.io/npm/dm/discovery-to-spec)](https://www.npmjs.com/package/discovery-to-spec)
+[![license](https://img.shields.io/npm/l/discovery-to-spec)](https://www.npmjs.com/package/discovery-to-spec)
+
 **The approved design decision your coding agent reads.**
 
 A free, repo-native workflow for design and product teams. Every feature moves through six short Markdown documents, from the problem to a spec developers (and coding agents) can build from, with a human decision gate in the middle.

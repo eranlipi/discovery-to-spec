@@ -2,6 +2,7 @@
 # and the package on npm. It runs on every push to master and skips whatever is already out,
 # so releasing is: bump "version" in package.json, add its CHANGELOG.md section, merge.
 # Pushing a v* tag, or running it from the Actions tab, works too.
+# npm authenticates with trusted publishing (OIDC) only: there is no npm token secret.
 name: release
 
 on:
@@ -23,14 +24,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
       - name: Work out the tag
         id: tag
         run: |
-          tag="v$(node -p "require('./package.json').version")"
-          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match package.json ($tag)." >&2
+          version="$(node -p "require('./package.json').version")"
+          tag="v$version"
+          # A run from a tag must publish exactly that version.
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME is version ${GITHUB_REF_NAME#v}, but package.json says $version. Bump \"version\" in package.json to match, or tag the commit as $tag."
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -45,23 +48,32 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ github.token }}
-      - if: steps.tag.outputs.skip != 'true' || steps.tag.outputs.npm_skip != 'true'
-        run: npm test
+      # The package has no dependencies, so there is no lockfile and npm ci only runs if one is added.
+      - name: Install, build, lint and test
+        if: steps.tag.outputs.skip != 'true' || steps.tag.outputs.npm_skip != 'true'
+        run: |
+          if [ -f package-lock.json ]; then npm ci; fi
+          npm run build --if-present
+          npm run lint --if-present
+          npm run test --if-present
+      # Trusted publishing needs npm 11.5.1 or later.
+      - name: Upgrade npm
+        if: steps.tag.outputs.npm_skip != 'true'
+        run: |
+          npm install -g npm@latest
+          npm --version
       # npm goes first, so a failed publish never leaves a GitHub release that npm doesn't have.
       # Re-running the job after a failure is safe: whatever is already out is skipped.
       # Authenticates with npm trusted publishing: on npmjs.com, the package's Settings >
       # Trusted publishing lists GitHub Actions, this repository and release.yml, with
-      # "npm publish" allowed. An NPM_TOKEN repository secret still works as a fallback.
+      # "npm publish" allowed.
       - name: Publish to npm
         if: steps.tag.outputs.npm_skip != 'true'
         run: |
-          npm install -g npm@^11.5.1
           npm publish --provenance --access public --loglevel verbose || {
             echo "::error::npm publish failed. If the log says ENEEDAUTH or mentions OIDC: on npmjs.com, open discovery-to-spec > Settings > Trusted publishing and check there is a GitHub Actions entry for $GITHUB_REPOSITORY with the workflow file release.yml and \"npm publish\" allowed. Then re-run this job."
             exit 1
           }
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - if: steps.tag.outputs.skip != 'true'
         run: node .github/scripts/release-notes.mjs > notes.md
       - name: Package the Figma plugin and the AI assistant
