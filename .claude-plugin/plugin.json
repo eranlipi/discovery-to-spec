@@ -1,0 +1,11 @@
+{
+  "name": "discovery-to-spec",
+  "version": "0.8.0",
+  "description": "A repo-native design workflow: frame → research → options → decide → spec → handoff. Skills that walk a feature through six short Markdown documents, with a human decision gate in the middle.",
+  "author": { "name": "Eran Lipshtain" },
+  "homepage": "https://discoverytospec.com",
+  "repository": "https://github.com/eranlipi/discovery-to-spec",
+  "license": "MIT",
+  "keywords": ["design", "product", "discovery", "spec", "figma", "openspec"],
+  "skills": "./integrations/skills/"
+}

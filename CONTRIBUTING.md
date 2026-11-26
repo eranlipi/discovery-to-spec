@@ -52,7 +52,7 @@ node /path/to/discovery-to-spec/bin/d2s.js new "Something to explore"
 
 ## Releasing
 
-1. Bump `version` in `package.json` and add a `## <version> (<date>)` section at the top of `CHANGELOG.md`.
+1. Bump `version` in `package.json` and in `.claude-plugin/plugin.json` (a test checks they match), and add a `## <version> (<date>)` section at the top of `CHANGELOG.md`.
 2. Merge to `master`. `.github/workflows/release.yml` runs the tests, creates the `v<version>` tag and publishes the release, with that CHANGELOG section as its notes. Pushes that don't change the version do nothing.
 
 ## Pull requests

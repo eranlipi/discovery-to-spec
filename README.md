@@ -27,7 +27,7 @@ AI coding tools made building fast. What's slow now is everything before it: fra
 - **A decision log** (`design/decisions.md`) that fills itself, so nobody re-argues a decision six months later.
 - **A generated handoff** with the chosen direction, its Figma links and the acceptance criteria in one place. Rejected directions stay out. If your repo uses OpenSpec, it also drafts an OpenSpec change proposal.
 - **A one-page summary for design and product** (`summary.md`), generated with the handoff: the problem, what you learned, what you decided and why, what you didn't choose, who approved, and what's being built.
-- **Agent skills** for Claude Code and Cursor (`/d2s-explore` to think an idea through, then `/d2s-frame` … `/d2s-handoff`), plus an `AGENTS.md` section for other agents. Agents help write and summarize; they're told never to invent research and never to approve decisions.
+- **Agent skills** for Claude Code (also as a plugin) and Cursor (`/d2s-explore` to think an idea through, then `/d2s-frame` … `/d2s-handoff`), plus an `AGENTS.md` section for other agents. Agents help write and summarize; they're told never to invent research and never to approve decisions.
 - **An optional CI check** for pull requests.
 
 See [`examples/checkout`](examples/checkout) for a complete, fictional feature that went through all six stages, or try the whole flow in the [sandbox on the website](https://discoverytospec.com/#sandbox). It runs the real CLI in your browser.
@@ -222,6 +222,14 @@ In the Figma plugin, the whole paste is saved as one commit, such as "001-checko
 - **Cursor only** (`.cursor/`, `.cursorrules` or `~/.cursor`): they go in `.cursor/skills/`.
 - **Both, or neither found:** `.claude/skills/`. Cursor reads that folder too, so one copy works in both tools and nothing shows up twice.
 - **`AGENTS.md`** (Codex, Copilot and others): if the repo has one, `init` adds the shared rules to it. It doesn't create one unless you pass `--agents agents-md`.
+
+**Or install the skills as a Claude Code plugin.** This repository is also a plugin marketplace. Inside Claude Code, run:
+
+```
+/plugin install discovery-to-spec --marketplace eranlipi/discovery-to-spec
+```
+
+On Claude Code versions before 2.1.275, add the marketplace first with `/plugin marketplace add eranlipi/discovery-to-spec`, then run `/plugin install discovery-to-spec@discovery-to-spec`. The plugin's skills are named `/discovery-to-spec:d2s-frame` and so on, and `/plugin update` keeps them current without `init --force`. Each repository still needs `npx discovery-to-spec init` once for its config and `design/` folder (the skills offer to run it). To avoid a second copy of the skills in the repository, run it with `--agents none`.
 
 `--agents` overrides what `init` finds. After upgrading, `init --force` puts the skills in the right place and removes the `.cursor/commands/d2s-*` copies that earlier versions wrote.
 
