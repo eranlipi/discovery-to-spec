@@ -35,7 +35,7 @@ node /path/to/discovery-to-spec/bin/d2s.js new "Something to explore"
 | `src/cli.js` | Commands and output |
 | `src/lib.js` | Front matter, section parsing, validation, approval rules, explorations |
 | `templates/<lang>/` | Stage templates, plus the design folder's README, context and decision log |
-| `integrations/skills/` | Agent skills (rendered into `.claude/skills/` and `.cursor/commands/`) |
+| `claude-plugin/` | The Claude Code plugin: its manifest, icon and the agent skills. `d2s init` copies the same skills into `.claude/skills/` or `.cursor/skills/`. Markdown, JSON and images only, because the Claude plugin directory refuses code |
 | `integrations/agents-md.md` | The block added to `AGENTS.md` |
 | `integrations/ci/` | The optional GitHub Actions check |
 | `examples/checkout/` | A complete, fictional exploration |
@@ -52,7 +52,7 @@ node /path/to/discovery-to-spec/bin/d2s.js new "Something to explore"
 
 ## Releasing
 
-1. Bump `version` in `package.json` and in `.claude-plugin/plugin.json` (a test checks they match), and add a `## <version> (<date>)` section at the top of `CHANGELOG.md`.
+1. Bump `version` in `package.json` and in `claude-plugin/.claude-plugin/plugin.json` (a test checks they match), and add a `## <version> (<date>)` section at the top of `CHANGELOG.md`.
 2. Merge to `master`. `.github/workflows/release.yml` runs the tests, creates the `v<version>` tag and publishes the release, with that CHANGELOG section as its notes. Pushes that don't change the version do nothing.
 
 ## Pull requests

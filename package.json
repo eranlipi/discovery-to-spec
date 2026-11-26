@@ -31,7 +31,7 @@
     "bin",
     "src",
     "templates",
-    "integrations/skills",
+    "claude-plugin/skills",
     "integrations/agents-md.md",
     "integrations/ci",
     "README.md",
