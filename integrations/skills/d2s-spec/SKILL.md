@@ -5,13 +5,15 @@ description: Stage 5 (spec) of a discovery-to-spec design exploration. Turns the
 
 # d2s: spec (stage 5 of 6)
 
-Input: $ARGUMENTS is the exploration id. If it is empty, run `{{cli}} status --json` and ask which one.
+Setup: `.d2s.json` at the repository root holds `cli`, the command that runs d2s (such as `npx d2s`), and `dir`, the design folder (usually `design`). Below, `<cli>` and `<dir>` stand for those values. If there is no `.d2s.json`, this repository isn't set up yet: say so, offer to run `npx discovery-to-spec init`, and continue once it has run.
 
-1. Read `.d2s.json` and write in its `lang`. Read `{{dir}}/context.md`, then `decision.md`, and spec only the approved direction. If `decision.md` has no approval, stop and say so.
+Input: $ARGUMENTS is the exploration id. If it is empty, run `<cli> status --json` and ask which one.
+
+1. Read `.d2s.json` and write in its `lang`. Read `<dir>/context.md`, then `decision.md`, and spec only the approved direction. If `decision.md` has no approval, stop and say so.
 2. If the Figma MCP server is available, read every linked frame, and the current screens linked under "Where it lives today" in the brief. List the screens in flow order, each with its frame link.
 3. For each screen, go through the states: default, empty, loading, error, no permission, and any other state the design implies. Ask the user about every state the design doesn't show.
 4. Cover edge cases: long text, many items, zero items, slow or no connection, first-time user, and right-to-left layout where relevant.
 5. Write one acceptance criterion per behavior, in the template's format (Given / When / Then, or בהינתן / כאשר / אז in Hebrew). Each one must be testable.
 6. Fill "Existing components": the design-system components the screens reuse, with a link to the Figma library or Storybook, and any new component with the reason it is needed. If the Figma MCP server is available, search the team's design-system library (and the repo's Code Connect mappings or Storybook, if any) and prefer existing components.
 7. Record anything undecided as an open question; never invent behavior.
-8. Run `{{cli}} check <id> --strict --json` and work through each issue's `fix` until `ok` is true. Next step: `{{cli}} next <id>`, which generates `handoff.md`.
+8. Run `<cli> check <id> --strict --json` and work through each issue's `fix` until `ok` is true. Next step: `<cli> next <id>`, which generates `handoff.md`.

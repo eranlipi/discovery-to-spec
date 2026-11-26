@@ -236,7 +236,7 @@ test('init installs /d2s-explore, the read-only skill for before Frame', () => {
   const skill = read(repo, '.claude/skills/d2s-explore/SKILL.md');
   assert.match(skill, /^---\nname: d2s-explore\ndescription: /);
   assert.doesNotMatch(skill, /\{\{\w+\}\}/, 'placeholders are rendered');
-  assert.match(skill, /npx discovery-to-spec status --all --json/);
+  assert.match(skill, /`<cli> status --all --json`/);
   assert.match(skill, /Write nothing without a clear yes/);
   for (const name of ['d2s-frame', 'd2s-research', 'd2s-options', 'd2s-decide', 'd2s-spec']) {
     assert.match(read(repo, `.claude/skills/${name}/SKILL.md`), /check <id> --strict --json/, `${name} reads the check as JSON`);
