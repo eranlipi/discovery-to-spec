@@ -39,6 +39,10 @@ The plugin itself is Markdown only: seven skills, with no hooks, no MCP servers,
 - **It sends nothing anywhere.** The CLI has zero dependencies and makes no network calls. The one exception is not part of this plugin: an opt-in CI check you can add to your own GitHub workflow, which asks GitHub who approved a pull request.
 - **Figma is optional.** If you have connected the Figma MCP server yourself, the skills read the frames your documents link to. The plugin doesn't install or configure it.
 
+## Privacy
+
+The plugin collects nothing and sends nothing: see the [privacy policy](https://github.com/eranlipi/discovery-to-spec/blob/master/claude-plugin/PRIVACY.md).
+
 ## More
 
 The full documentation, the CLI reference and an example are in the [repository README](https://github.com/eranlipi/discovery-to-spec#readme). MIT license.
