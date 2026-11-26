@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "discovery-to-spec",
-      "source": "./",
+      "source": "./claude-plugin",
       "description": "Skills for the discovery-to-spec design workflow: /d2s-explore, then /d2s-frame … /d2s-handoff."
     }
   ]

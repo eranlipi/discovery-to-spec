@@ -318,7 +318,7 @@ test('init defaults to "npx d2s" when the package is installed in the project', 
   const repo = tmpRepo();
   const installed = path.join(repo, 'node_modules', 'discovery-to-spec');
   fs.mkdirSync(installed, { recursive: true });
-  for (const entry of ['bin', 'src', 'templates', 'integrations', 'package.json']) {
+  for (const entry of ['bin', 'src', 'templates', 'integrations', 'claude-plugin', 'package.json']) {
     fs.cpSync(path.join(PKG_ROOT, entry), path.join(installed, entry), { recursive: true });
   }
   const r = runBin(path.join(installed, 'bin', 'd2s.js'), repo, 'init', '--ci');
@@ -334,7 +334,7 @@ test('CI installs with pnpm or yarn when the project has their lockfile', () => 
     fs.writeFileSync(path.join(repo, lockfile), '');
     const installed = path.join(repo, 'node_modules', 'discovery-to-spec');
     fs.mkdirSync(installed, { recursive: true });
-    for (const entry of ['bin', 'src', 'templates', 'integrations', 'package.json']) {
+    for (const entry of ['bin', 'src', 'templates', 'integrations', 'claude-plugin', 'package.json']) {
       fs.cpSync(path.join(PKG_ROOT, entry), path.join(installed, entry), { recursive: true });
     }
     const r = runBin(path.join(installed, 'bin', 'd2s.js'), repo, 'init', '--ci');

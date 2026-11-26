@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **New: a Claude Code plugin.** The repository is a plugin marketplace: `/plugin install discovery-to-spec --marketplace eranlipi/discovery-to-spec` installs the seven skills, and `/plugin update` keeps them current.
+- **New: a Claude Code plugin.** The repository is a plugin marketplace: `/plugin install discovery-to-spec --marketplace eranlipi/discovery-to-spec` installs the seven skills, and `/plugin update` keeps them current. The plugin lives in `claude-plugin/` and holds Markdown, JSON and an icon only, which is what the Claude plugin directory accepts.
 - **The skills read `cli` and `dir` from `.d2s.json`** instead of having them written in by `init`, so the same files serve `init` and the plugin. When a repository has no `.d2s.json`, a skill offers to run `init`. Run `d2s init --force` to update the copies in your repository.
 
 ## 0.8.0 (2026-11-15)

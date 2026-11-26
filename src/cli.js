@@ -172,7 +172,7 @@ function init(flags) {
   }
 
   // Agent skills (ours to manage: refreshed with --force)
-  const packaged = path.join(lib.PKG_ROOT, 'integrations', 'skills');
+  const packaged = path.join(lib.PKG_ROOT, 'claude-plugin', 'skills');
   const skills = fs.readdirSync(packaged).filter((n) => n.startsWith('d2s-')).sort();
   for (const name of skills) {
     const text = lib.render(lib.readText(path.join(packaged, name, 'SKILL.md')), vars);

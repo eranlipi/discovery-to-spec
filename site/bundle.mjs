@@ -32,7 +32,7 @@ export const pkg = JSON.parse(read(ROOT, 'package.json'));
  * A script that defines window.D2S_NEW(), which returns a fresh in-memory d2s,
  * and window.D2S, one ready instance. `dirs` are the packaged folders to embed.
  */
-export function sandboxScript({ dirs = ['templates', 'integrations'] } = {}) {
+export function sandboxScript({ dirs = ['templates', 'integrations', 'claude-plugin/skills'] } = {}) {
   const modules = ['src/lib.js', 'src/cli.js']
     .map((rel) => {
       const src = scriptSafe(read(ROOT, rel), rel);
