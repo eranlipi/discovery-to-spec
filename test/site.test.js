@@ -63,8 +63,8 @@ test('every translatable element has its Hebrew text, including the upgrade note
   const he = context.window.D2S_I18N.he;
   const keys = [...new Set([...html.matchAll(/data-i18n(?:-aria)?="([^"]+)"/g)].map((m) => m[1]))];
   assert.deepEqual(keys.filter((k) => typeof he[k] !== 'string'), [], 'every data-i18n key needs a Hebrew entry in i18n.js');
-  assert.match(html, /data-i18n="install\.upgrade"><b>Upgrading to 0\.9\?<\/b>[^<]*<code dir="ltr">d2s init --force<\/code>/);
-  assert.match(he['install.upgrade'], /^<b>משדרגים ל-0\.9\?<\/b>.*<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(html, /data-i18n="install\.upgrade"><b>Upgrading to 0\.10\?<\/b>[^<]*<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(he['install.upgrade'], /^<b>משדרגים ל-0\.10\?<\/b>.*<code dir="ltr">d2s init --force<\/code>/);
   assert.match(html, /data-i18n="assistant\.upgrade"><b>Added it before 0\.6\?<\/b>/);
   assert.doesNotMatch(html + he['faq.a1'], /plugin is planned|תוסף ל-Figma מתוכנן/, 'the Figma plugin has shipped');
 
@@ -108,6 +108,45 @@ test('the sandbox runs the real CLI in memory', () => {
   assert.match(d2s.read('design/README.md'), /תהליך|עיצוב/);
   assert.equal(d2s.run(['templates', 'brief']).code, 0);
   assert.match(d2s.read('design/templates/brief.md'), /## הבעיה/);
+});
+
+test('the sandbox keeps the handoff and the approval tied to the documents, like the CLI', () => {
+  const d2s = loadSandbox(fs.readFileSync(path.join(buildSite(), 'index.html'), 'utf8'));
+  const today = new Date().toISOString().slice(0, 10);
+  const doc = (name) => `design/explorations/001-checkout/${name}`;
+  const fill = (name, extra = {}) =>
+    d2s.write(doc(name), d2s.read(doc(name)).replace(/^## (.+)$/gm, (line, h) => `${line}\n${h in extra ? extra[h] : 'Filled.'}`));
+  const out = (args) => d2s.run(args).lines.join('\n');
+  d2s.run(['init', '--cli', 'd2s']);
+  d2s.run(['new', 'Checkout']);
+  for (const name of ['brief.md', 'insights.md', 'options.md']) {
+    fill(name);
+    assert.equal(d2s.run(['next', '1']).code, 0, name);
+  }
+  fill('decision.md', {
+    'Chosen direction': 'One-page checkout.',
+    'Approved by': '- Dana Levi, product, 2020-01-05\n- Yossi Bar, design, 2020-01-05\n- Ron Tal, engineering, 2020-01-05',
+  });
+  assert.equal(d2s.run(['next', '1']).code, 0);
+  fill('spec.md', { 'Acceptance criteria': 'Given a full cart, When the user taps "Pay", Then one page opens.' });
+  assert.equal(d2s.run(['next', '1']).code, 0);
+  assert.match(d2s.read(doc('handoff.md')), /^sources: [a-z0-9]+$/m);
+  assert.match(d2s.read(doc('brief.md')), /^approved-direction: [a-z0-9]+$/m);
+
+  d2s.write(doc('spec.md'), d2s.read(doc('spec.md')).replace('Then one page opens.', 'Then one page opens, with the total on top.'));
+  assert.match(out(['check']), /handoff\.md: out of date/);
+  assert.equal(d2s.run(['handoff', '1']).code, 0);
+  assert.equal(d2s.run(['check', '--strict']).code, 0);
+
+  d2s.write(doc('decision.md'), d2s.read(doc('decision.md')).replace('One-page checkout.', 'A three-step accordion.'));
+  assert.match(out(['check']), /"Chosen direction" changed after it was approved/);
+  assert.equal(d2s.run(['reopen', '1']).code, 0);
+  assert.ok(!d2s.exists(doc('handoff.md')) && !d2s.exists(doc('summary.md')), 'the in-memory files are removed too');
+  assert.match(out(['next', '1']), /before the decision was reopened/);
+  d2s.write(doc('decision.md'), d2s.read(doc('decision.md')).replace(/2020-01-05/g, today));
+  assert.equal(d2s.run(['next', '1']).code, 0);
+  assert.equal(d2s.run(['next', '1']).code, 0);
+  assert.match(d2s.read(doc('handoff.md')), /A three-step accordion\./);
 });
 
 test('the stage form reads and writes the same Markdown the CLI checks', () => {

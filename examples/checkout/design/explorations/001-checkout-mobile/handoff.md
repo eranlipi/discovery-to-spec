@@ -1,6 +1,7 @@
 ---
 id: 001-checkout-mobile
 generated: 2026-11-08
+sources: 1aqz9hq97ec
 ---
 
 # Mobile checkout drop-off: handoff

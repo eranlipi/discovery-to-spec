@@ -95,7 +95,7 @@ window.D2S_I18N = {
       '4. להריץ `npx discovery-to-spec status` ולהסביר לי איך מתחילים פיצ׳ר: /d2s-explore כדי לחשוב על רעיון, או /d2s-frame כדי לכתוב את מסמך המסגור.',
     'install.setupCopy': 'להעתיק את הפרומפט',
     'install.note':'דרוש Node.js בגרסה 18 ומעלה, אצל מי שמריץ את הכלי. מוסיפים <code dir="ltr">--lang he</code> לתבניות בעברית.',
-    'install.upgrade': '<b>משדרגים ל-0.9?</b> מעדכנים את החבילה ומריצים <code dir="ltr">d2s init --force</code> כדי לקבל את ה-skills המעודכנים. אפשר גם להתקין אותם כפלאגין ל-Claude Code: <code dir="ltr">/plugin install discovery-to-spec --marketplace eranlipi/discovery-to-spec</code>. מי שמגיע מ-0.6 או מוקדם יותר: <code dir="ltr">init --force</code> גם שמה את ה-skills במקום שבו כלי ה-AI שלכם קוראים אותם. למעצבים לא משתנה כלום: התוסף ל-Figma ועוזר ה-AI עובדים כמו קודם.',
+    'install.upgrade': '<b>משדרגים ל-0.10?</b> מעדכנים את החבילה ומריצים <code dir="ltr">d2s init --force</code> כדי לקבל את ה-skills המעודכנים. אפשר גם להתקין אותם כפלאגין ל-Claude Code: <code dir="ltr">/plugin install discovery-to-spec --marketplace eranlipi/discovery-to-spec</code>. מעכשיו <code dir="ltr">d2s check</code> מזהיר כש-handoff כבר לא מעודכן, ונכשל כשהכיוון שנבחר נערך אחרי שאושר. ל-handoff קיים מריצים פעם אחת <code dir="ltr">d2s handoff &lt;id&gt;</code> כדי שייבדק. מי שמגיע מ-0.6 או מוקדם יותר: <code dir="ltr">init --force</code> גם שמה את ה-skills במקום שבו כלי ה-AI שלכם קוראים אותם. למעצבים לא משתנה כלום: התוסף ל-Figma ועוזר ה-AI עובדים כמו קודם.',
 
     'workflow.title': 'התהליך',
     'workflow.frame': 'מגדירים את הבעיה: למי היא מפריעה, מה רוצים שיקרה, כמה זמן שווה להשקיע ומה לא עושים',

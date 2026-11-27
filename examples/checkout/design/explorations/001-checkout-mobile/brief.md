@@ -5,6 +5,7 @@ stage: handoff
 owner: Product lead
 created: 2026-11-08
 decided: 2026-11-06
+approved-direction: 2el4ma3m59w
 ---
 
 # Mobile checkout drop-off

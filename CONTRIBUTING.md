@@ -8,6 +8,7 @@ Thanks for helping. discovery-to-spec is meant to stay small, so the bar for new
 - **No telemetry, and no network calls by default.** The CLI reads and writes files inside the user's repository. The one exception is `d2s check --verify-approvals`, which reads pull request reviews from the GitHub API, only when a team sets `approvals.verify` to `"github-pr"`. Keep it that way.
 - **The `##` headings in the templates are part of the contract.** `d2s check` and the handoff rely on them. Changing a heading is a breaking change for teams that already have documents.
 - **When you change a template, add its new fingerprint** to `SHIPPED` in `src/lib.js` (the tests print it). That's how `d2s init --force` knows a team's copy is an unchanged older version it can refresh. A new required section also needs a way for older documents to pass `d2s check`: see `SECTIONS_SINCE_0_6`.
+- **The handoff carries a fingerprint of what it reads** (`handoffSources` in `src/lib.js`), and `d2s check` compares it. If you make the handoff or the summary read something new, every existing handoff shows as out of date once, until `d2s handoff` runs. Regenerate the example too: `cd examples/checkout && node ../../bin/d2s.js handoff 1` (a test checks it).
 - **Agents never approve.** Skills may help write and summarize, but must never fill in "approved by" or invent research. The gate enforces this in `checkApprovals` in `src/lib.js`, so every surface (CLI, CI, the website, a future plugin) gets the same rules.
 
 ## Development

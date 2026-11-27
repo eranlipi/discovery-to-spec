@@ -26,7 +26,7 @@ On Claude Code versions before 2.1.275, run `/plugin marketplace add eranlipi/di
 | `/discovery-to-spec:d2s-options` | Laying out genuinely different directions |
 | `/discovery-to-spec:d2s-decide` | Preparing the decision meeting and recording the outcome (never the approval) |
 | `/discovery-to-spec:d2s-spec` | Going through every state and edge case, and writing testable criteria |
-| `/discovery-to-spec:d2s-handoff` | Implementing from the spec, asking instead of guessing |
+| `/discovery-to-spec:d2s-handoff` | Implementing from the spec, asking instead of guessing. It checks first that the handoff is up to date and the direction is the approved one |
 
 The skills never invent research and never approve a decision: approvals are for people.
 
