@@ -689,6 +689,12 @@ test('Hebrew locale: right-to-left templates go through the same gate', () => {
   assert.match(summary, /: סיכום$/m);
   assert.match(summary, /## מה החלטנו\nתשלום בעמוד אחד\./);
   assert.match(summary, /## מה בונים\nעמוד תשלום אחד\./);
+
+  // A direction edited after its approval: the message is in Hebrew too.
+  setSection(decision, 'הכיוון שנבחר', 'תשלום בשני עמודים.');
+  const changed = run(repo, 'check', id);
+  assert.equal(changed.code, 1);
+  assert.match(changed.out, /"הכיוון שנבחר" השתנה אחרי שאושר ב-\d{4}-\d{2}-\d{2}\. החזירו את הנוסח שאושר, או פתחו את ההחלטה מחדש: npx discovery-to-spec reopen 001-exploration/);
 });
 
 test('check fails when a stage that was already passed is emptied (for CI)', () => {
@@ -704,6 +710,176 @@ test('check fails when a stage that was already passed is emptied (for CI)', () 
   assert.equal(r.code, 1);
   assert.match(r.out, /section "Problem" is empty/);
   assert.equal(run(repo, 'check', '--strict').code, 1);
+});
+
+/** An exploration taken through every gate to the handoff. Everyone approved on `approvedOn`. */
+function toHandoff(repo, { approvedOn = '2020-01-05' } = {}) {
+  run(repo, 'init');
+  run(repo, 'new', 'Mobile checkout drop-off', '--slug', 'checkout');
+  const id = '001-checkout';
+  for (const file of ['brief.md', 'insights.md', 'options.md']) {
+    fill(exp(repo, id, file));
+    assert.equal(run(repo, 'next', id).code, 0, file);
+  }
+  fill(exp(repo, id, 'decision.md'), {
+    'Chosen direction': 'One-page checkout. https://www.figma.com/design/abc/Checkout?node-id=1-2',
+    'Approved by': approvals(approvedOn),
+  });
+  assert.equal(run(repo, 'next', id).code, 0);
+  fill(exp(repo, id, 'spec.md'), { 'Acceptance criteria': 'Given a full cart, When the user taps "Pay", Then one page opens.' });
+  const r = run(repo, 'next', id);
+  assert.equal(r.code, 0, r.out);
+  return id;
+}
+
+const approvals = (date) => `- Dana Levi, product, ${date}\n- Yossi Bar, design, ${date}\n- Ron Tal, engineering, ${date}`;
+const frontMatter = (file) => lib.parseFrontMatter(fs.readFileSync(file, 'utf8')).data;
+
+test('check says when the handoff is out of date, and d2s handoff brings it up to date', () => {
+  const repo = tmpRepo();
+  const id = toHandoff(repo);
+  const handoff = exp(repo, id, 'handoff.md');
+  assert.match(frontMatter(handoff).sources, /^[a-z0-9]+$/, 'the handoff carries a fingerprint of what it was generated from');
+  let r = run(repo, 'check', id, '--strict');
+  assert.equal(r.code, 0, r.out);
+
+  // A document the handoff isn't made from, and a section it doesn't read: still up to date.
+  setSection(exp(repo, id, 'options.md'), 'Direction A', 'Reworded, with the same frames.');
+  setSection(exp(repo, id, 'spec.md'), 'Existing components', 'The primary button. No new components.');
+  r = run(repo, 'check', id, '--strict');
+  assert.equal(r.code, 0, r.out);
+  assert.doesNotMatch(r.out, /out of date/);
+
+  // A new acceptance criterion: the handoff a coding agent reads no longer matches the spec.
+  setSection(exp(repo, id, 'spec.md'), 'Acceptance criteria', 'Given a full cart, When the user taps "Pay", Then one page opens.\nGiven a declined card, When the user submits, Then the details stay in the form.');
+  r = run(repo, 'check', id);
+  assert.equal(r.code, 0, 'a warning: CI keeps passing');
+  assert.match(r.out, /warn {2}design\/explorations\/001-checkout\/handoff\.md: out of date: the documents it is generated from changed\. Regenerate it: npx discovery-to-spec handoff 001-checkout\n/);
+  assert.doesNotMatch(r.out, /in progress/, 'a generated document is never in progress');
+  assert.equal(run(repo, 'check', id, '--strict').code, 1, 'an error for whoever is about to build from it');
+  assert.match(run(repo, 'status').out, /out of date: d2s handoff 001-checkout/);
+  assert.match(run(repo, 'status', id).out, /handoff\.md {2}out of date — regenerate it: d2s handoff 001-checkout/);
+
+  const status = JSON.parse(run(repo, 'status', id, '--json').out).exploration;
+  assert.deepEqual(status.next, { action: 'regenerate', file: 'handoff.md', skill: 'd2s-handoff', command: 'npx discovery-to-spec handoff 001-checkout' });
+  const strict = JSON.parse(run(repo, 'check', id, '--strict', '--json').out);
+  assert.equal(strict.ok, false);
+  const errors = strict.items[0].issues.filter((i) => i.level === 'error');
+  assert.deepEqual(errors.map((i) => [i.stage, i.code, i.file]), [['handoff', 'stale', 'design/explorations/001-checkout/handoff.md']]);
+  assert.match(errors[0].fix, /^Run "npx discovery-to-spec handoff 001-checkout" to regenerate handoff\.md and summary\.md/);
+
+  assert.doesNotMatch(read(handoff), /declined card/);
+  assert.equal(run(repo, 'handoff', id).code, 0);
+  assert.match(read(handoff), /Given a declined card/);
+  r = run(repo, 'check', id, '--strict');
+  assert.equal(r.code, 0, r.out);
+  assert.match(run(repo, 'status', id).out, /ready for development/);
+  assert.equal(JSON.parse(run(repo, 'status', id, '--json').out).exploration.next.action, 'build');
+
+  // A handoff generated before d2s 0.10.0 has no fingerprint, so there is nothing to compare.
+  fs.writeFileSync(handoff, read(handoff).replace(/^sources: .*\n/m, ''));
+  setSection(exp(repo, id, 'spec.md'), 'Acceptance criteria', 'Given an empty cart, When the user opens checkout, Then they see the cart.');
+  r = run(repo, 'check', id, '--strict');
+  assert.equal(r.code, 0, r.out);
+});
+
+test('a chosen direction edited after its approval fails check, until the decision is reopened and approved again', () => {
+  const repo = tmpRepo();
+  const id = toHandoff(repo);
+  const brief = exp(repo, id, 'brief.md');
+  const decision = exp(repo, id, 'decision.md');
+  const approved = frontMatter(brief)['approved-direction'];
+  assert.match(approved, /^[a-z0-9]+$/, 'passing the gate records what was approved');
+  assert.equal(run(repo, 'check', id).code, 0);
+
+  // The same words on other lines are the same direction.
+  setSection(decision, 'Chosen direction', 'One-page checkout.\nhttps://www.figma.com/design/abc/Checkout?node-id=1-2');
+  let r = run(repo, 'check', id);
+  assert.equal(r.code, 0, r.out);
+  assert.doesNotMatch(r.out, /changed after it was approved/);
+
+  // Another direction under the same approvals.
+  setSection(decision, 'Chosen direction', 'A three-step accordion. https://www.figma.com/design/abc/Checkout?node-id=9-9');
+  r = run(repo, 'check', id);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /error design\/explorations\/001-checkout\/decision\.md: "Chosen direction" changed after it was approved on \d{4}-\d{2}-\d{2}\. Restore the approved text, or reopen the decision: npx discovery-to-spec reopen 001-checkout\n/);
+  const issue = JSON.parse(run(repo, 'check', id, '--json').out).items[0].issues.find((i) => i.code === 'changed');
+  assert.deepEqual([issue.stage, issue.level, issue.section], ['decide', 'error', 'Chosen direction']);
+  assert.match(issue.fix, /^Ask the user: restore the approved text of "Chosen direction", or reopen the decision with "npx discovery-to-spec reopen 001-checkout"/);
+  assert.match(issue.fix, /Never reopen or approve on your own$/);
+
+  // It stays out of the handoff.
+  r = run(repo, 'handoff', id);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /the handoff can't be regenerated yet:\n.*changed after it was approved/);
+  assert.doesNotMatch(read(exp(repo, id, 'handoff.md')), /accordion|node-id=9-9/);
+
+  // Putting the approved text back is one way out.
+  setSection(decision, 'Chosen direction', 'One-page checkout. https://www.figma.com/design/abc/Checkout?node-id=1-2');
+  assert.equal(run(repo, 'check', id, '--strict').code, 0);
+
+  // Reopening the decision is the other.
+  setSection(decision, 'Chosen direction', 'A three-step accordion. https://www.figma.com/design/abc/Checkout?node-id=9-9');
+  r = run(repo, 'reopen', id);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /001-checkout: handoff → decide \(reopened\)\n {2}Removed handoff\.md and summary\.md/);
+  assert.equal(frontMatter(brief).stage, 'decide');
+  assert.equal(frontMatter(brief).reopened, lib.today());
+  assert.ok(!fs.existsSync(exp(repo, id, 'handoff.md')) && !fs.existsSync(exp(repo, id, 'summary.md')), 'nobody builds from the earlier decision');
+  r = run(repo, 'check', id);
+  assert.equal(r.code, 0, 'back at the gate, the decision is in progress');
+  assert.doesNotMatch(r.out, /changed after it was approved/);
+
+  // The approvals from before don't carry over to the new direction.
+  r = run(repo, 'next', id);
+  assert.equal(r.code, 1);
+  assert.match(r.out, new RegExp(`Dana Levi approved on 2020-01-05, before the decision was reopened on ${lib.today()}\\. Everyone approves the new direction and updates their date`));
+  setSection(decision, 'Approved by', approvals(lib.today()));
+  r = run(repo, 'next', id);
+  assert.equal(r.code, 0, r.out);
+  assert.equal(frontMatter(brief).stage, 'spec');
+  assert.notEqual(frontMatter(brief)['approved-direction'], approved, 'the new direction is the approved one now');
+  const log = read(repo, 'design', 'decisions.md');
+  assert.match(log, /\| One-page checkout\. \|[^\n]*\n\|[^\n]*\| A three-step accordion\. \|/, 'the log keeps both decisions, in order');
+
+  // The spec was kept, and the handoff follows from the new decision.
+  assert.match(read(exp(repo, id, 'spec.md')), /Given a full cart/);
+  r = run(repo, 'next', id);
+  assert.equal(r.code, 0, r.out);
+  assert.match(read(exp(repo, id, 'handoff.md')), /A three-step accordion\./);
+  assert.match(read(exp(repo, id, 'handoff.md')), /node-id=9-9/);
+  r = run(repo, 'check', id, '--strict');
+  assert.equal(r.code, 0, r.out);
+});
+
+test('the example exploration is up to date with its own documents', () => {
+  const r = run(path.join(PKG_ROOT, 'examples', 'checkout'), 'check', '--strict');
+  assert.equal(r.code, 0, `${r.out}\nRegenerate it: cd examples/checkout && node ../../bin/d2s.js handoff 1`);
+  const dir = path.join(PKG_ROOT, 'examples', 'checkout', 'design', 'explorations', '001-checkout-mobile');
+  assert.ok(frontMatter(path.join(dir, 'handoff.md')).sources, 'the example shows the handoff fingerprint');
+  assert.ok(frontMatter(path.join(dir, 'brief.md'))['approved-direction'], 'and the approved direction');
+});
+
+test('reopen needs a decision that passed the gate', () => {
+  const repo = tmpRepo();
+  run(repo, 'init');
+  run(repo, 'new', 'Onboarding');
+  const r = run(repo, 'reopen', '1');
+  assert.equal(r.code, 1);
+  assert.match(r.out, /001-onboarding is at "frame": its decision hasn't passed the gate, so there is nothing to reopen\./);
+  assert.equal(run(repo, 'reopen').code, 1);
+});
+
+test('a decision approved before 0.10.0 has no fingerprint, so check does not guess', () => {
+  const repo = tmpRepo();
+  const id = toHandoff(repo);
+  const brief = exp(repo, id, 'brief.md');
+  fs.writeFileSync(brief, read(brief).replace(/^approved-direction: .*\n/m, ''));
+  setSection(exp(repo, id, 'decision.md'), 'Chosen direction', 'A three-step accordion.');
+  const r = run(repo, 'check', id);
+  assert.equal(r.code, 0, r.out);
+  assert.doesNotMatch(r.out, /changed after it was approved/);
+  assert.match(r.out, /handoff\.md: out of date/, 'the handoff still shows that its sources moved');
 });
 
 test('archive refuses unfinished work unless forced', () => {
@@ -778,6 +954,24 @@ test('lib: approval rules', () => {
   assert.match(he('- סוכן AI, פיתוח, 2026-11-20')[0], /רק אנשים מאשרים/);
 
   assert.equal(lib.formatApprovalLine({ name: 'Dana, Levi', role: 'design', date: '2026-11-20', handle: '' }), '- Dana  Levi, design, 2026-11-20');
+
+  // After a decision is reopened, an approval from before that day doesn't count.
+  assert.deepEqual(check(ok3, { since: '2026-11-20' }), [], 'the day it was reopened counts');
+  assert.deepEqual(check(ok3, { since: '2026-11-21' }), [
+    'Dana Levi approved on 2026-11-20, before the decision was reopened on 2026-11-21. Everyone approves the new direction and updates their date',
+    'Yossi Bar approved on 2026-11-20, before the decision was reopened on 2026-11-21. Everyone approves the new direction and updates their date',
+  ]);
+  assert.deepEqual(check(ok3, { since: '' }), [], 'a decision that was never reopened');
+  assert.match(
+    lib.checkApprovals('- דנה לוי, מוצר, 2026-11-20', { lang: 'he', roles: ['product'], since: '2026-12-01' })[0],
+    /האישור של דנה לוי מ-2026-11-20 ניתן לפני שההחלטה נפתחה מחדש ב-2026-12-01/,
+  );
+});
+
+test('lib: reflowing a chosen direction is not a new direction', () => {
+  const a = lib.directionFingerprint('One-page checkout.\nhttps://www.figma.com/design/abc');
+  assert.equal(lib.directionFingerprint('  One-page   checkout. https://www.figma.com/design/abc\r\n'), a);
+  assert.notEqual(lib.directionFingerprint('Two-page checkout. https://www.figma.com/design/abc'), a);
 });
 
 test('decisions approved before 0.2.0 only warn, so CI does not break on upgrade', () => {

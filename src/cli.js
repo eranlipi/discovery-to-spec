@@ -327,8 +327,8 @@ function nextStep(ctx, exp) {
   const i = lib.stageIndex(exp.stage);
   if (i < 0) return 'fix stage in brief.md';
   const stage = STAGES[i];
-  if (stage.id === 'handoff') return `build it, then: d2s archive ${exp.id}`;
   const r = lib.checkStageDoc(ctx, exp, stage);
+  if (stage.id === 'handoff') return r.errors.length ? `out of date: d2s handoff ${exp.id}` : `build it, then: d2s archive ${exp.id}`;
   return r.errors.length ? `fill ${stage.file} (/${stage.skill})` : `ready: d2s next ${exp.id}`;
 }
 
@@ -353,11 +353,12 @@ function statusOne(ctx, exp) {
     const name = `${i + 1}. ${stage.id.padEnd(9)} ${stage.file}`;
     if (i < current) ok(name);
     else if (i === current) {
+      const r = lib.checkStageDoc(ctx, exp, stage);
       if (stage.id === 'handoff') {
-        log(`${c.yellow('●')} ${name}  ${c.green('ready for development')}${c.dim(` — then d2s archive ${exp.id}`)}`);
+        if (r.errors.length) log(`${c.yellow('●')} ${name}  ${c.yellow('out of date')}${c.dim(` — regenerate it: d2s handoff ${exp.id}`)}`);
+        else log(`${c.yellow('●')} ${name}  ${c.green('ready for development')}${c.dim(` — then d2s archive ${exp.id}`)}`);
         return;
       }
-      const r = lib.checkStageDoc(ctx, exp, stage);
       log(`${c.yellow('●')} ${name}  ${r.errors.length ? c.dim(`${r.errors.length} gap(s) — /${stage.skill}`) : c.green('ready for d2s next')}`);
       r.errors.forEach((e) => log(c.dim(`      ${e}`)));
     } else log(c.dim(`· ${name}`));
@@ -377,15 +378,18 @@ function printJson(value) {
   log(JSON.stringify({ format: JSON_FORMAT, ...value }, null, 2));
 }
 
-/** What to do next with an exploration: fill the stage's document, pass the gate, or build it. */
+/** What to do next with an exploration: fill the stage's document, pass the gate, regenerate the handoff, or build it. */
 function nextAction(ctx, exp) {
   if (exp.archived) return null;
   const cli = ctx.config.cli;
   const i = lib.stageIndex(exp.stage);
   if (i < 0) return { action: 'fix', file: 'brief.md', skill: null, command: null };
   const stage = STAGES[i];
-  if (stage.id === 'handoff') return { action: 'build', file: stage.file, skill: stage.skill, command: `${cli} archive ${exp.id}` };
   const gaps = lib.checkStageDoc(ctx, exp, stage).errors.length;
+  if (stage.id === 'handoff') {
+    if (gaps) return { action: 'regenerate', file: stage.file, skill: stage.skill, command: `${cli} handoff ${exp.id}` };
+    return { action: 'build', file: stage.file, skill: stage.skill, command: `${cli} archive ${exp.id}` };
+  }
   return { action: gaps ? 'fill' : 'next', file: stage.file, skill: stage.skill, command: `${cli} next ${exp.id}` };
 }
 
@@ -577,7 +581,12 @@ function next(positional, flags) {
   else if (!lib.exists(file)) lib.writeText(file, lib.render(lib.getTemplate(ctx, target.template), vars));
 
   let brief = lib.setFrontMatterField(lib.readText(exp.briefPath), 'stage', target.id);
-  if (STAGES[i].id === 'decide') brief = lib.setFrontMatterField(brief, 'decided', lib.today());
+  if (STAGES[i].id === 'decide') {
+    // The approvals are for this direction: check compares it with the fingerprint from now on.
+    const chosen = lib.sectionContent(path.join(exp.dir, STAGES[i].file), KEY_SECTIONS[ctx.lang].chosen);
+    brief = lib.setFrontMatterField(brief, 'decided', lib.today());
+    brief = lib.setFrontMatterField(brief, lib.APPROVED_DIRECTION, lib.directionFingerprint(chosen));
+  }
   lib.writeText(exp.briefPath, brief);
   ok(`${exp.id}: ${STAGES[i].id} → ${target.id}`);
   log(`  ${path.relative(ctx.root, file)}`);
@@ -613,56 +622,21 @@ function appendDecision(ctx, exp) {
 // ---------- handoff ----------
 
 function writeHandoff(ctx, exp, flags = {}) {
-  const keys = KEY_SECTIONS[ctx.lang];
-  const docs = STAGES.slice(0, 5).map((s) => path.join(exp.dir, s.file));
-  // Only the approved direction matters to development: links from the decision and the spec.
-  const approvedText = [docs[3], docs[4]].filter(lib.exists).map(lib.readText).join('\n');
-  const links = lib.figmaLinks(approvedText);
-  const none = '—';
-  const chosen = lib.sectionContent(docs[3], keys.chosen);
-  const vars = {
-    id: exp.id,
-    title: exp.title,
-    date: lib.today(),
-    cli: ctx.config.cli,
-    chosen: chosen ? lib.firstParagraph(chosen, 400) : none,
-    figma: links.length ? links.map((l) => `- ${l}`).join('\n') : none,
-    criteria: lib.sectionContent(docs[4], keys.criteria) || none,
-    openQuestions: lib.sectionContent(docs[0], keys.openQuestions) || none,
-  };
+  const src = lib.handoffSources(ctx, exp);
+  const run = { date: lib.today(), cli: ctx.config.cli };
   const file = path.join(exp.dir, 'handoff.md');
-  lib.writeText(file, lib.render(lib.getTemplate(ctx, 'handoff'), vars));
-  writeSummary(ctx, exp, docs, vars);
+  const text = lib.render(lib.getTemplate(ctx, 'handoff'), { ...src.handoff, ...run });
+  // "sources" is what check compares, to tell when a source document changed afterwards.
+  lib.writeText(file, lib.setFrontMatterField(text, 'sources', src.fingerprint));
+  writeSummary(ctx, exp, { ...src.summary, ...run }, src.none);
 
   const openspecDir = path.join(ctx.root, 'openspec');
-  if (flags.openspec || lib.exists(openspecDir)) writeOpenSpecProposal(ctx, exp, { chosen, links, force: !!flags.force });
+  if (flags.openspec || lib.exists(openspecDir)) writeOpenSpecProposal(ctx, exp, { chosen: src.chosen, links: src.links, force: !!flags.force });
   return file;
 }
 
 /** The one-page summary for design and product, written next to the handoff. */
-function writeSummary(ctx, exp, docs, handoffVars) {
-  const keys = KEY_SECTIONS[ctx.lang];
-  const none = '—';
-  const [brief, insights, , decision, spec] = docs;
-  const get = (file, key) => lib.sectionContent(file, keys[key]);
-  const questions = [get(brief, 'openQuestions'), get(insights, 'unclear')].filter(Boolean).join('\n\n');
-  const vars = {
-    ...handoffVars,
-    problem: get(brief, 'problem') || none,
-    who: get(brief, 'who') || none,
-    where: get(brief, 'where') || none,
-    outcome: get(brief, 'outcome') || none,
-    appetite: get(brief, 'appetite') || none,
-    noGos: get(brief, 'noGos'),
-    insights: get(insights, 'insights') || none,
-    chosen: get(decision, 'chosen') || none,
-    why: get(decision, 'why'),
-    rejected: get(decision, 'rejected') || none,
-    risks: get(decision, 'risks') || none,
-    approvedBy: get(decision, 'approvedBy') || none,
-    screens: get(spec, 'screens') || none,
-    openQuestions: questions || none,
-  };
+function writeSummary(ctx, exp, vars, none) {
   const text = lib
     .render(lib.getTemplate(ctx, 'summary'), vars)
     .replace(new RegExp(`\n## [^\n]+\n${none}\n`, 'g'), '\n') // optional sections left empty
@@ -705,8 +679,47 @@ function handoff(positional, flags) {
   if (exp.stage !== 'handoff') {
     throw new UserError(`${exp.id} is at "${exp.stage}". Reach handoff with: ${ctx.config.cli} next ${exp.id}`);
   }
+  // The handoff carries only what passed the gates: a direction edited after its approval stays out.
+  const r = lib.checkExploration(ctx, exp);
+  if (r.errors.length) {
+    bad(`${exp.id}: the handoff can't be regenerated yet:`);
+    r.errors.forEach((e) => log(`    ${e}`));
+    return 1;
+  }
   const file = writeHandoff(ctx, exp, flags);
   ok(`Regenerated ${path.relative(ctx.root, file)} and summary.md`);
+  return 0;
+}
+
+// ---------- reopen ----------
+
+/**
+ * Take a decision back to the gate, for when the chosen direction has to change after it
+ * was approved. The people who approved approve again, with a date from today on, and the
+ * spec and the handoff follow from the new decision.
+ */
+function reopen(positional) {
+  const ctx = lib.loadContext();
+  const exp = lib.resolveExploration(ctx, positional[0]);
+  const i = lib.stageIndex(exp.stage);
+  if (i < 0) throw new UserError(`Unknown stage "${exp.stage}" in ${path.relative(ctx.root, exp.briefPath)}.`);
+  if (i <= lib.stageIndex('decide')) {
+    throw new UserError(`${exp.id} is at "${exp.stage}": its decision hasn't passed the gate, so there is nothing to reopen.`);
+  }
+  let brief = lib.setFrontMatterField(lib.readText(exp.briefPath), 'stage', 'decide');
+  brief = lib.setFrontMatterField(brief, 'reopened', lib.today());
+  lib.writeText(exp.briefPath, brief);
+  // The handoff and the summary describe the earlier decision. They are generated again when the spec passes.
+  const removed = ['handoff.md', 'summary.md'].filter((name) => {
+    const file = path.join(exp.dir, name);
+    if (!lib.exists(file)) return false;
+    fs.rmSync(file);
+    return true;
+  });
+  ok(`${exp.id}: ${exp.stage} → decide (reopened)`);
+  if (removed.length) log(`  Removed ${removed.join(' and ')}: generated again when the spec passes.`);
+  log(`\nNext: update decision.md (or run /d2s-decide ${exp.id}). Everyone approves again, with today's date or later, then: ${ctx.config.cli} next ${exp.id}`);
+  log('The spec is kept. Update it for the new direction before it passes again.');
   return 0;
 }
 
@@ -761,8 +774,10 @@ Usage: d2s <command> [options]
       --pr <n>, --repo <owner/name>   The pull request, outside GitHub Actions
   next <id>             Pass the gate: validate the current stage and open the next
   handoff <id>          Regenerate handoff.md and summary.md (and the OpenSpec draft,
-                        if openspec/ exists)
+                        if openspec/ exists). check says when they are out of date
       --openspec          Write the OpenSpec draft even without an openspec/ folder
+  reopen <id>           Take a decision back to the gate, to change the chosen direction
+                        after it was approved. Everyone approves again
   archive <id>          Move a built exploration to explorations/archive
 
 Stages: frame → research → options → decide → spec → handoff
@@ -800,6 +815,8 @@ function main(argv) {
         return next(positional, flags);
       case 'handoff':
         return handoff(positional, flags);
+      case 'reopen':
+        return reopen(positional, flags);
       case 'archive':
         return archive(positional, flags);
       default:

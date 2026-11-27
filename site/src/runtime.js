@@ -155,6 +155,11 @@ function createD2sSandbox(bundle) {
       });
       mkdirp(dirname(to));
     },
+    rmSync: function (p) {
+      var f = resolve(p);
+      if (!files.has(f)) throw enoent('rm', p);
+      files.delete(f);
+    },
     realpathSync: function (p) {
       var f = resolve(p);
       if (!files.has(f) && !dirs.has(f)) throw enoent('realpath', p);

@@ -57,3 +57,12 @@ test('claude plugin: skills read cli and dir from .d2s.json instead of placehold
     assert.match(text, /offer to run `npx discovery-to-spec init`/, `${name} handles a repository without d2s`);
   }
 });
+
+test('claude plugin: /d2s-handoff checks the exploration before anything is built', () => {
+  const text = fs.readFileSync(path.join(SKILLS, 'd2s-handoff', 'SKILL.md'), 'utf8');
+  const steps = text.slice(text.indexOf('\n1. '));
+  assert.match(steps, /^\n1\. Before reading or building anything, run `<cli> check <id> --strict --json`/, 'the check is the first step');
+  assert.match(steps, /code `stale`[^\n]*Run `<cli> handoff <id>`/, 'an out-of-date handoff is regenerated');
+  assert.match(steps, /code `changed`[^\n]*Stop[^\n]*don't run `<cli> reopen <id>` unless the user asks/, 'a direction edited after approval goes back to people');
+  assert.match(steps, /Never build from an older `handoff\.md`/);
+});

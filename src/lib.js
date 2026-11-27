@@ -17,6 +17,8 @@ const STAGES = [
   { id: 'handoff', file: 'handoff.md', template: 'handoff', skill: 'd2s-handoff' },
 ];
 const ARCHIVED = 'archived';
+// brief.md front matter: the fingerprint of the direction that passed the decision gate.
+const APPROVED_DIRECTION = 'approved-direction';
 
 // Headings the CLI reads to build the handoff and the summary. Must match the templates.
 const KEY_SECTIONS = {
@@ -339,6 +341,8 @@ function readExploration(ctx, id, archived = false) {
     stage: archived ? ARCHIVED : fm.stage || 'frame',
     owner: fm.owner || '',
     decided: fm.decided || '',
+    approvedDirection: fm[APPROVED_DIRECTION] || '',
+    reopened: fm.reopened || '',
   };
 }
 
@@ -400,6 +404,8 @@ const APPROVAL_TEXT = {
     twice: (name) => `${name} is listed for two roles`,
     handle: (name) => `${name} needs a GitHub handle (like @name), so the approval can be verified`,
     notApproved: (handle) => `${handle} has not approved this pull request on GitHub`,
+    before: (name, date, since) => `${name} approved on ${date}, before the decision was reopened on ${since}. Everyone approves the new direction and updates their date`,
+    changed: (h, date, command) => `"${h}" changed after it was approved${date ? ` on ${date}` : ''}. Restore the approved text, or reopen the decision: ${command}`,
     legacy: ' (approved before d2s 0.2.0: use the new format next time you edit it)',
   },
   he: {
@@ -410,6 +416,8 @@ const APPROVAL_TEXT = {
     twice: (name) => `השם ${name} מופיע בשני תפקידים`,
     handle: (name) => `חסר שם משתמש ב-GitHub ל-${name} (כמו @name), ולכן אי אפשר לאמת את האישור`,
     notApproved: (handle) => `אין עדיין אישור של ${handle} ל-pull request הזה ב-GitHub`,
+    before: (name, date, since) => `האישור של ${name} מ-${date} ניתן לפני שההחלטה נפתחה מחדש ב-${since}. כל המאשרים מאשרים את הכיוון החדש ומעדכנים את התאריך`,
+    changed: (h, date, command) => `"${h}" השתנה אחרי שאושר${date ? ` ב-${date}` : ''}. החזירו את הנוסח שאושר, או פתחו את ההחלטה מחדש: ${command}`,
     legacy: ' (אושר לפני d2s 0.2.0: עדכנו לפורמט החדש בעריכה הבאה)',
   },
 };
@@ -487,6 +495,7 @@ function agentIn(entry) {
 /**
  * Validate the content of "Approved by". Returns plain-language problems.
  * `settings` is .d2s.json's `approvals` plus `lang` and the section `heading`.
+ * `since` is the date a decision was reopened: an approval from before it doesn't count.
  */
 function checkApprovals(content, settings) {
   const s = { ...DEFAULT_APPROVALS, ...settings };
@@ -519,7 +528,63 @@ function checkApprovals(content, settings) {
     }
     for (const p of roles.values()) if (p.roles.size > 1) problems.push(t.twice(p.name));
   }
+  if (isDate(s.since)) {
+    for (const e of valid) if (e.date < s.since) problems.push(t.before(e.name, e.date, s.since));
+  }
   return problems;
+}
+
+// ---------- what was approved, and what the handoff is made from ----------
+
+/**
+ * The fingerprint of a chosen direction, recorded in brief.md when the decision passes the
+ * gate. Line breaks and spacing don't count, so reflowing the text isn't a new direction.
+ */
+function directionFingerprint(content) {
+  return fingerprint(String(content).replace(/\s+/g, ' ').trim());
+}
+
+/**
+ * Everything handoff.md and summary.md are generated from: the values for their templates,
+ * and one fingerprint of them. The handoff carries it as `sources`, so `check` can tell when
+ * a source document changed afterwards. The date and the command aren't part of it. A d2s
+ * version that reads more from the documents makes older handoffs out of date once, which
+ * is true: regenerating them adds what's new.
+ */
+function handoffSources(ctx, exp) {
+  const keys = KEY_SECTIONS[ctx.lang];
+  const none = '—';
+  const [brief, insights, , decision, spec] = STAGES.slice(0, 5).map((s) => path.join(exp.dir, s.file));
+  const get = (file, key) => sectionContent(file, keys[key]);
+  // Only the approved direction matters to development: links from the decision and the spec.
+  const links = figmaLinks([decision, spec].filter(exists).map(readText).join('\n'));
+  const chosen = get(decision, 'chosen');
+  const handoff = {
+    id: exp.id,
+    title: exp.title,
+    chosen: chosen ? firstParagraph(chosen, 400) : none,
+    figma: links.length ? links.map((l) => `- ${l}`).join('\n') : none,
+    criteria: get(spec, 'criteria') || none,
+    openQuestions: get(brief, 'openQuestions') || none,
+  };
+  const summary = {
+    ...handoff,
+    problem: get(brief, 'problem') || none,
+    who: get(brief, 'who') || none,
+    where: get(brief, 'where') || none,
+    outcome: get(brief, 'outcome') || none,
+    appetite: get(brief, 'appetite') || none,
+    noGos: get(brief, 'noGos'),
+    insights: get(insights, 'insights') || none,
+    chosen: chosen || none,
+    why: get(decision, 'why'),
+    rejected: get(decision, 'rejected') || none,
+    risks: get(decision, 'risks') || none,
+    approvedBy: get(decision, 'approvedBy') || none,
+    screens: get(spec, 'screens') || none,
+    openQuestions: [get(brief, 'openQuestions'), get(insights, 'unclear')].filter(Boolean).join('\n\n') || none,
+  };
+  return { handoff, summary, chosen, links, none, fingerprint: fingerprint(JSON.stringify([handoff, summary])) };
 }
 
 // ---------- validation ----------
@@ -532,8 +597,10 @@ function checkApprovals(content, settings) {
  * `legacyApprovals` turns approval-format problems into warnings, for decisions
  * that passed the gate before d2s 0.2.0. `legacySections` is for a stage that already
  * passed: a section that 0.6.0 added only warns while the document predates it.
+ * `passed` is for a decision that passed the gate: its chosen direction must still be
+ * the one that was approved.
  */
-function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySections = false } = {}) {
+function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySections = false, passed = false } = {}) {
   const issues = [];
   const file = path.join(exp.dir, stage.file);
   const rel = path.relative(ctx.root, file);
@@ -549,7 +616,14 @@ function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySection
     add('error', null, 'file', 'file is missing');
     return result();
   }
-  if (stage.id === 'handoff') return result(); // generated
+  if (stage.id === 'handoff') {
+    // Generated, so there is nothing to fill. It only goes out of date.
+    const stamp = parseFrontMatter(readText(file)).data.sources;
+    if (stamp && stamp !== handoffSources(ctx, exp).fingerprint) {
+      add('error', null, 'stale', `out of date: the documents it is generated from changed. Regenerate it: ${cliOf(ctx)} handoff ${exp.id}`);
+    }
+    return result();
+  }
 
   const text = readText(file);
   const body = parseFrontMatter(text).body;
@@ -577,11 +651,17 @@ function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySection
     const heading = KEY_SECTIONS[ctx.lang].approvedBy;
     const s = findSection(docSections, heading);
     if (s && s.content) {
-      const settings = { ...(ctx.config.approvals || {}), lang: ctx.lang, heading };
+      const settings = { ...(ctx.config.approvals || {}), lang: ctx.lang, heading, since: exp.reopened };
       for (const message of checkApprovals(s.content, settings)) {
         if (legacyApprovals) add('warning', heading, 'approval', message + approvalText(ctx.lang).legacy);
         else add('error', heading, 'approval', message);
       }
+    }
+    // The approvals belong to the direction that passed the gate. Decisions that passed
+    // before d2s 0.10.0 carry no fingerprint, so there is nothing to compare them with.
+    const chosen = findSection(docSections, KEY_SECTIONS[ctx.lang].chosen);
+    if (passed && exp.approvedDirection && chosen && chosen.content && directionFingerprint(chosen.content) !== exp.approvedDirection) {
+      add('error', chosen.heading, 'changed', approvalText(ctx.lang).changed(chosen.heading, exp.decided, `${cliOf(ctx)} reopen ${exp.id}`));
     }
   }
   if (stage.id === 'spec') {
@@ -593,12 +673,16 @@ function checkStageDoc(ctx, exp, stage, { legacyApprovals = false, legacySection
   return result();
 }
 
+function cliOf(ctx) {
+  return (ctx.config && ctx.config.cli) || 'npx d2s';
+}
+
 /**
  * What to do about a problem `checkStageDoc` found, in one line, for agents and for
  * `--json` readers. An agent never writes an approval: it asks the people.
  */
 function fixFor(ctx, exp, stage, code, section) {
-  const cli = (ctx.config && ctx.config.cli) || 'npx d2s';
+  const cli = cliOf(ctx);
   switch (code) {
     case 'file':
       return `Restore ${stage.file}, or create it with "${cli} next ${exp.id}" from the stage before`;
@@ -614,6 +698,10 @@ function fixFor(ctx, exp, stage, code, section) {
       return 'Each person who approved adds their own line: name, role, date. Never write an approval for someone';
     case 'criteria':
       return 'Write each criterion as Given / When / Then';
+    case 'stale':
+      return `Run "${cli} handoff ${exp.id}" to regenerate handoff.md and summary.md, and read them again`;
+    case 'changed':
+      return `Ask the user: restore the approved text of "${section}", or reopen the decision with "${cli} reopen ${exp.id}" so the people who approved can approve the new direction. Never reopen or approve on your own`;
     default:
       return '';
   }
@@ -645,10 +733,11 @@ function checkExploration(ctx, exp, { strict = false } = {}) {
     const legacyApprovals = stage.id === 'decide' && i < current && !exp.decided;
     // A stage that passed before 0.6.0 may lack the sections 0.6.0 added; its document shows it.
     const legacySections = i < current;
-    const r = checkStageDoc(ctx, exp, stage, { legacyApprovals, legacySections });
+    const r = checkStageDoc(ctx, exp, stage, { legacyApprovals, legacySections, passed: i < current });
     const binding = i < current || strict;
     if (binding) errors.push(...r.errors);
-    else warnings.push(...r.errors.map((e) => `${e} (in progress)`));
+    // The handoff is generated, never in progress: its only problem is being out of date.
+    else warnings.push(...r.errors.map((e) => (stage.id === 'handoff' ? e : `${e} (in progress)`)));
     warnings.push(...r.warnings);
     for (const issue of r.issues) {
       const inProgress = !binding && issue.level === 'error';
@@ -702,6 +791,9 @@ module.exports = {
   parseApprovalLines,
   formatApprovalLine,
   checkApprovals,
+  APPROVED_DIRECTION,
+  directionFingerprint,
+  handoffSources,
   checkStageDoc,
   checkExploration,
 };

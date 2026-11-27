@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+The handoff stays true to what was approved.
+
+- **`d2s check` says when the handoff is out of date.** `handoff.md` now records a fingerprint of what it was generated from. When the spec, the decision or the brief changes afterwards, `check` warns, `status` shows "out of date", and `d2s handoff <id>` regenerates it. With `--strict` it's an error. Changes the handoff doesn't read, such as rewording a rejected option, don't count.
+- **An approval belongs to the direction that was approved.** Passing the decision gate records a fingerprint of "Chosen direction" in `brief.md`. If the section is edited afterwards, `check` fails and `d2s handoff` refuses, so an unapproved direction never reaches the handoff. Reflowing the same words doesn't count.
+- **New: `d2s reopen <id>`** takes a decision back to the gate when the direction has to change:
+  - it removes the generated handoff and summary, so nobody builds from the earlier decision;
+  - approvals from before that day don't carry over: every approver approves again, with a new date;
+  - passing the gate again adds a new row to the decision log, and the spec is kept.
+- **`/d2s-handoff` checks before it builds.** It runs `check <id> --strict --json` first: it regenerates an out-of-date handoff, and stops when the direction changed after its approval. The `AGENTS.md` rules say the same.
+- **In `--json`:** two new issue codes, `stale` and `changed`, each with a `fix`, and a new `next.action`, `regenerate`.
+- **Upgrading:** run `d2s init --force` to get the updated skills. Decisions and handoffs from before this version carry no fingerprint, so `check` has nothing to compare them with. Run `d2s handoff <id>` once to give an existing handoff one.
+
 ## 0.9.0 (2026-11-26)
 
 The d2s skills as a Claude Code plugin.

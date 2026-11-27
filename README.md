@@ -26,6 +26,7 @@ AI coding tools made building fast. What's slow now is everything before it: fra
 - **A decision gate.** `d2s next` won't move an exploration forward until the current document is complete. The decision passes only with one line per approver (name, role and date) covering product, design and engineering. Placeholders like "TBD" and AI tool names are rejected, and CI can check each approval against a GitHub review.
 - **A decision log** (`design/decisions.md`) that fills itself, so nobody re-argues a decision six months later.
 - **A generated handoff** with the chosen direction, its Figma links and the acceptance criteria in one place. Rejected directions stay out. If your repo uses OpenSpec, it also drafts an OpenSpec change proposal.
+- **A handoff that stays true to what was approved.** `d2s check` says when the spec changed after the handoff was generated, and fails when the chosen direction was edited after people approved it (see [after the approval](#after-the-approval)).
 - **A one-page summary for design and product** (`summary.md`), generated with the handoff: the problem, what you learned, what you decided and why, what you didn't choose, who approved, and what's being built.
 - **Agent skills** for Claude Code (also as a plugin) and Cursor (`/d2s-explore` to think an idea through, then `/d2s-frame` … `/d2s-handoff`), plus an `AGENTS.md` section for other agents. Agents help write and summarize; they're told never to invent research and never to approve decisions.
 - **An optional CI check** for pull requests.
@@ -115,10 +116,11 @@ The structure borrows from Shape Up (appetite, no-gos), continuous discovery (ev
 | `d2s init` | Creates the config, `design/README.md`, `design/context.md` and the agent skills for the AI tools it finds (see [AI agents](#ai-agents)). Options: `--lang en\|he`, `--dir`, `--agents claude,cursor,agents-md\|none`, `--cli`, `--ci`, `--force` (refreshes an initialized repo, see [refreshing templates](#refreshing-templates)) |
 | `d2s templates [name...]` | Copies the built-in templates into `design/templates/` so you can adapt them: all of them, or the ones you name (`brief spec`). Copies you already have are kept |
 | `d2s new "<title>"` | Starts an exploration. Options: `--slug`, `--owner` |
-| `d2s status [id]` | Lists explorations, or shows one stage by stage. `--all` includes archived ones. `--json` prints one JSON document for agents and scripts: each exploration's next step and its problems, each with a `fix` |
-| `d2s check [id]` | Validates documents and exits with 1 on errors. Stages already passed must be complete; the current one may be in progress (`--strict` requires it too). `--verify-approvals` checks approvals against GitHub reviews (see below). `--json` prints one JSON document: `ok`, a summary, and every problem with a `fix` |
-| `d2s next <id>` | Validates the current stage and opens the next one. Passing the decision adds a row to the decision log; passing the spec generates the handoff and the summary |
-| `d2s handoff <id>` | Regenerates the handoff and the summary (and the OpenSpec draft). `--openspec` forces the draft |
+| `d2s status [id]` | Lists explorations, or shows one stage by stage, including a handoff that is out of date. `--all` includes archived ones. `--json` prints one JSON document for agents and scripts: each exploration's next step and its problems, each with a `fix` |
+| `d2s check [id]` | Validates documents and exits with 1 on errors. Stages already passed must be complete, and an approved direction must be unchanged; the current stage may be in progress (`--strict` requires it too, and an up-to-date handoff). `--verify-approvals` checks approvals against GitHub reviews (see below). `--json` prints one JSON document: `ok`, a summary, and every problem with a `fix` |
+| `d2s next <id>` | Validates the current stage and opens the next one. Passing the decision adds a row to the decision log and records what was approved; passing the spec generates the handoff and the summary |
+| `d2s handoff <id>` | Regenerates the handoff and the summary (and the OpenSpec draft) after the spec or another source document changed. `--openspec` forces the draft |
+| `d2s reopen <id>` | Takes a decision back to the gate, to change the chosen direction after it was approved. Everyone approves again (see [after the approval](#after-the-approval)) |
 | `d2s archive <id>` | Moves a built exploration to `explorations/archive/` |
 
 An id can be the folder name (`003-checkout`), its number (`3`) or its slug (`checkout`).
@@ -159,6 +161,16 @@ The rules live in `.d2s.json`. Teams of two or three set `allowSamePerson` to `t
 ```
 
 **Verifying approvals on GitHub.** Set `verify` to `"github-pr"` and every line needs a GitHub handle. In CI, `d2s check --verify-approvals` then asks the GitHub API whether each listed handle approved the pull request, and fails on any line without a matching approval. It only looks at explorations whose `decision.md` the pull request changes. This is the only time d2s uses the network. With `verify` at `"none"`, the flag does nothing.
+
+### After the approval
+
+An approval belongs to the direction people approved, and the handoff is what developers and coding agents build from. d2s keeps both tied to the documents:
+
+- **The chosen direction.** Passing the gate records a fingerprint of "Chosen direction" in `brief.md` (`approved-direction`). If that section is edited afterwards, `d2s check` fails: `"Chosen direction" changed after it was approved on 2026-11-21`. Reflowing the same words doesn't count. There are two ways out: put the approved text back, or reopen the decision.
+- **Reopening.** `d2s reopen <id>` moves the exploration back to the decide stage and removes the generated handoff and summary, so nobody builds from the earlier decision. Approvals from before that day don't carry over: every approver approves the new direction and updates their date. `d2s next` then records the new decision as a new row in the decision log. The spec is kept; update it and pass it again to get the new handoff.
+- **The handoff.** `handoff.md` records a fingerprint of what it was generated from (`sources`). When the spec, the decision or the brief changes afterwards, `d2s check` warns that the handoff is out of date, and `d2s status` shows it. `d2s handoff <id>` regenerates it. With `--strict` it's an error, which is what the `/d2s-handoff` skill runs before building. A direction that was edited after its approval never reaches the handoff: `d2s handoff` refuses until it is restored or approved again.
+
+Decisions and handoffs from before 0.10 carry no fingerprint, so there is nothing to compare them with. Run `d2s handoff <id>` once to give an existing handoff one.
 
 **Upgrading from 0.1.** Passing the gate now records a `decided` date in `brief.md`. Decisions that passed before the upgrade have no date, so `d2s check` shows their free-text approvals as warnings, not errors, and CI keeps passing.
 
@@ -216,7 +228,7 @@ In the Figma plugin, the whole paste is saved as one commit, such as "001-checko
 | `/d2s-options` | Laying out genuinely different directions, each with what it changes in the product |
 | `/d2s-decide` | Preparing the decision meeting and recording the outcome (never the approval) |
 | `/d2s-spec` | Going through every state and edge case, writing testable criteria and naming the components it reuses |
-| `/d2s-handoff` | Implementing from the spec, asking instead of guessing |
+| `/d2s-handoff` | Implementing from the spec, asking instead of guessing. It checks first that the handoff is up to date and the direction is the approved one |
 
 - **Claude Code** (a `.claude/` folder or `CLAUDE.md` in the repo, or `~/.claude` on your computer): the skills go in `.claude/skills/`.
 - **Cursor only** (`.cursor/`, `.cursorrules` or `~/.cursor`): they go in `.cursor/skills/`.
