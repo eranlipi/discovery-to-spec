@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 (2026-11-27)
 
 The handoff stays true to what was approved.
 

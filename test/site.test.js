@@ -63,8 +63,8 @@ test('every translatable element has its Hebrew text, including the upgrade note
   const he = context.window.D2S_I18N.he;
   const keys = [...new Set([...html.matchAll(/data-i18n(?:-aria)?="([^"]+)"/g)].map((m) => m[1]))];
   assert.deepEqual(keys.filter((k) => typeof he[k] !== 'string'), [], 'every data-i18n key needs a Hebrew entry in i18n.js');
-  assert.match(html, /data-i18n="install\.upgrade"><b>Upgrading to 0\.9\?<\/b>[^<]*<code dir="ltr">d2s init --force<\/code>/);
-  assert.match(he['install.upgrade'], /^<b>משדרגים ל-0\.9\?<\/b>.*<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(html, /data-i18n="install\.upgrade"><b>Upgrading to 0\.10\?<\/b>[^<]*<code dir="ltr">d2s init --force<\/code>/);
+  assert.match(he['install.upgrade'], /^<b>משדרגים ל-0\.10\?<\/b>.*<code dir="ltr">d2s init --force<\/code>/);
   assert.match(html, /data-i18n="assistant\.upgrade"><b>Added it before 0\.6\?<\/b>/);
   assert.doesNotMatch(html + he['faq.a1'], /plugin is planned|תוסף ל-Figma מתוכנן/, 'the Figma plugin has shipped');
 

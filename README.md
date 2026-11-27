@@ -14,7 +14,7 @@ frame → research → options → decide → spec → handoff
 
 **Website and in-browser sandbox:** [discoverytospec.com](https://discoverytospec.com)
 
-> Status: v0.9.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
+> Status: v0.10.0, early. It works end to end and has tests, but expect changes. Feedback and issues are very welcome.
 
 ## Why
 
@@ -69,7 +69,7 @@ yarn dlx discovery-to-spec init    # yarn 2+
 
 No network access? Download or clone this repository, then run `node path/to/discovery-to-spec/bin/d2s.js init`.
 
-To pin a version, add it to the name: `npm i -D discovery-to-spec@0.9.0`. Installing straight from GitHub still works too: `npm i -D github:eranlipi/discovery-to-spec#v0.9.0`.
+To pin a version, add it to the name: `npm i -D discovery-to-spec@0.10.0`. Installing straight from GitHub still works too: `npm i -D github:eranlipi/discovery-to-spec#v0.10.0`.
 
 ### Or let your AI assistant do it
 
@@ -271,6 +271,8 @@ Templates ship in English (default) and Hebrew (`--lang he`, right to left). The
 ### Refreshing templates
 
 Without copies of your own, the templates come with d2s and update when you upgrade it. Copies in `design/templates/` (made with `d2s templates`, or by `init` before 0.7) don't change until you run `d2s init --force`. It refreshes every copy, plus `design/README.md` and `design/context.md`, that you haven't changed, and keeps the ones you have. For a template you've made your own, it lists the sections the new version adds, to copy in by hand. Your settings and the decision log are kept.
+
+**Upgrading to 0.10.** Run `d2s init --force` to get the `/d2s-handoff` skill that checks before it builds. `d2s check` now warns when a handoff is out of date and fails when the chosen direction was edited after its approval (see [after the approval](#after-the-approval)). Run `d2s handoff <id>` once on an existing handoff so it can be checked.
 
 **Upgrading to 0.9.** Run `d2s init --force` to get the skills that read `cli` and `dir` from `.d2s.json`. If you use the Claude Code plugin instead, you don't need the copies in your repository: see [AI agents](#ai-agents).
 
